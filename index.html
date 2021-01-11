@@ -2,12 +2,103 @@
 <html>
   <head>
     <link href="css/styles.css" rel="stylesheet">
-  </head>
-  <body>
+<script>
 
-    <h1>My Website</h1>
+//конструктор очисла ===========
+function TUN(arr)
+{   //очисло
+	this.v=arr.slice();
+	
+	//генератор очисла по массиву
+	this.initByArr=function(arr){
+	 this.v = []; 
+	 for (i=0; i<arr.length;i++)
+	   this.v.push(arr[i]);
+	 return this;
+	};
+	
+	//генератор случайного очисла
+	this.randomInit=function(len){
+	 this.v = []; 
+	 for (i=0; i<len;i++)
+	   this.v.push(Math.round( Math.random()*1000)/100);
+	 return this;
+	};
+	
+	//преобразование лапласа с основанием p
+	this.laplas= function(p){
+	  a=this.v.slice();
+	  len = this.v.length;
+	  q=a[len-1];
+	  for(j=1;j<len;j++)
+		q+=q*(p)+a[len-j-1]-q;   
+	  return q;//! this;
+	};
+	
+	//преобразование лапласа векторное с основаниями p, p^2...
+	//длина вектора равна длине исх. массива
+	this.laplasVec= function(p){
+	  a=this.v.slice();
+	  len = this.v.length;
+	  this.v = [];
+	  pp=1;
+	  for(i=0;i<len;i++){
+	    pp*=p;
+	    q=a[len-1];
+	    for(j=1;j<len;j++)
+	  	q+=q*(pp)+a[len-j-1]-q;
+		this.v.push(q);
+	  } 	   
+	  return this;
+	};
+	
+	//..  сделать умножение столбиком и умножение через раскубирование, сравнить
+	//умножение столбиком
+	this.timesArr= function(arr){
+	  a=this.v.slice();
+	  len = arr.length + a.length - 1;
+	  this.v = [];
+	  
+	  for(i=0;i<len;i++){
+	    q=0;
+	    for(j=0;j<=i;j++)
+		  if(!isNaN(a[j]) && !isNaN(arr[i-j]))
+		    q+=a[j]*arr[i-j];
+	    this.v.push(q);
+	  }
+	  
+	  return this;
+	};
+	//
+	this.timesOun= function(oun2){
+	  return this.timesArr(oun2.v);
+	};
+};
+//==================
 
-    <p>This is my first website</p>
+function onload(){
+  un1 = new TUN([1,1]);
+  un2 = new TUN(un1.timesArr([1,1]).v);
+  alert(un2.v);
+  //alert(glOuN.randomInit(10).laplas(1.002).v);
+  //alert(glOuN.initByArr([1,1]).laplasVec(2).v);
+  //alert(glOuN.initByArr([1,1]).timesArr([1,1]).laplasVec(2).v);
+  //alert("m");
+}
+
+</script>
+	  
+</head>
+<body onload="onload()">
+	
+	
+  
+	
+
+    <h1>UniNumbers Calculator</h1>
+
+    <p>88</p>
+	
 
   </body>
 </html>		
