@@ -1,0 +1,163 @@
+
+
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    <title>Попытки привести матричное умножение к обобщенному.</title>
+    <script>
+
+    </script>
+
+
+     
+</head>
+ 
+<body onload="loadTrainData()" onresize="resizeAll()">
+<!--
+<div> Календарь тренировок c <input id="inputMinDay" type="number" size="5" value ="0"> по <input id="inputMaxDay" type="number" size="5" value ="365"> дней от сегодняшнего </div>
+-->
+<div>
+<button id="btnGenCase" style="height:40px;width:100%" onclick='btnGenCaseOnClick()'> Генерация нового примера </button>
+</div>
+<!--
+<div style="height:200px;overflow-y:scroll;border:2px solid #a1a1a1;">
+<ul id="actionsInCalendar"></ul>
+</div>
+<div> </div>
+    
+<div>
+<button id="btnPause" style="height:40px;width:100%" onclick='btnPauseOnClick()'> Пауза </button>
+</div>
+    
+<div> Навигация по текущей тренировке </div>
+<div style="height:100px;overflow-y:scroll;border:2px solid #a1a1a1;">
+<ul id="currentT"></ul>
+</div>    
+
+<div> Все тренировки </div>
+
+<div>
+<select id="selectAllTrain" style="height:40px;width:79%"></select>
+<button id="btnSelectAllTrain" style="height:40px;width:20%" '> Начать тренировку </button>
+</div>
+
+
+<div>
+<button id="btnPrint" style="height:40px;width:100%" onclick='btnPrintOnClick()'> Печать </button>
+</div>
+-->  
+<div>МАТРИЦА А</div>    
+<div>
+<textarea id="idMatrix" wrap="off" style="width:100%;height:150px;"> </textarea>
+</div>
+<div>Неизвестный вектор х</div>    
+<div>
+<textarea id="idX" wrap="off" style="width:100%;height:20px;"> </textarea>
+</div>
+<div>Правая часть b</div>    
+<div>
+<textarea id="idB" wrap="off" style="width:100%;height:20px;"> </textarea>
+</div>    
+<div>====================Циркулянт=======================</div>    
+<div>МАТРИЦА ЦИРКУЛЯНТ Circ_А</div>    
+<div>
+<textarea id="idMatrixCirc" wrap="off" style="width:100%;height:150px;"> </textarea>
+</div>
+<div>Тот же неизвестный вектор х</div>    
+<div>
+<textarea id="idXCirc" wrap="off" style="width:100%;height:20px;"> </textarea>
+</div>
+<div>Правая часть Cirk_b</div>    
+<div>
+<textarea id="idBCirc" wrap="off" style="width:100%;height:20px;"> </textarea>
+</div>  
+
+
+<script>
+    
+
+
+ const N_Dim = 7; 
+ var MatrixA = new Array(N_Dim);
+ var MatrixCircA = new Array(N_Dim);
+ var VectorX = new Array(N_Dim);
+ var VectorB = new Array(N_Dim);
+ var VectorCircB = new Array(N_Dim);   
+
+  function btnGenCaseOnClick()  {
+    var viewMatrixA = document.getElementById('idMatrix') 
+    var viewMatrixCircA = document.getElementById('idMatrixCirc') 
+    var viewVectorX = document.getElementById('idX')
+    var viewVectorCircX = document.getElementById('idXCirc')
+    var viewVectorB = document.getElementById('idB')
+    var viewVectorCircB = document.getElementById('idBCirc')
+    
+    //матрица 
+    viewMatrixA.value = ""
+    for(var i=0;i<N_Dim;i++){
+        MatrixA[i]= new Array(N_Dim)
+        for(var j=0;j<N_Dim;j++){
+            MatrixA[i][j]= Math.floor(Math.random()*10)
+            viewMatrixA.value = viewMatrixA.value + MatrixA[i][j] + ' ; '
+        }
+        viewMatrixA.value += '\n'
+    }
+      
+   //неизвестный вектор
+    viewVectorX.value = ""
+    for(var i=0;i<N_Dim;i++){
+            VectorX[i]= Math.floor(Math.random()*10)
+            viewVectorX.value = viewVectorX.value + VectorX[i] + ' ; '
+    }   
+      
+    //правая часть 
+    viewVectorB.value = ""
+    for(var i=0;i<N_Dim;i++){
+        VectorB[i]= 0
+        for(var j=0;j<N_Dim;j++){
+            VectorB[i]+= MatrixA[i][j]*VectorX[j]
+        }
+        viewVectorB.value = viewVectorB.value + VectorB[i] + ' ; '
+    }
+    
+    //матрица циркулянт
+    viewMatrixCircA.value = ""
+    for(var i=0;i<N_Dim;i++){
+        MatrixCircA[i]= new Array(N_Dim)
+        for(var j=0;j<N_Dim;j++){
+            MatrixCircA[i][j]= MatrixA[i][((N_Dim+j-i)%N_Dim)]
+            viewMatrixCircA.value = viewMatrixCircA.value + MatrixCircA[i][j] + ' ; '
+        }
+        viewMatrixCircA.value += '\n'
+    }
+      
+      
+    //тот же неизвестный вектор
+    viewVectorCircX.value = ""
+    for(var i=0;i<N_Dim;i++){
+//VectorX[i]= Math.floor(Math.random()*10)
+            viewVectorCircX.value = viewVectorCircX.value + VectorX[i] + ' ; '
+    }   
+    //новая правая часть 
+    viewVectorCircB.value = ""
+    for(var i=0;i<N_Dim;i++){
+        VectorCircB[i]= 0
+        for(var j=0;j<N_Dim;j++){
+            VectorCircB[i]+= MatrixCircA[i][j]*VectorX[j]
+        }
+        viewVectorCircB.value = viewVectorCircB.value + VectorCircB[i] + ' ; '
+    }
+      
+    //
+    
+  }
+    
+
+
+
+
+</script>
+
+</body>
+</html>
