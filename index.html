@@ -16,8 +16,8 @@
 
 
 
-
-//класс Матрица (в тч вектор) 
+//=============================================================================
+//класс Матрица (в тч вектор) --------------------------------------------------
 function Matrix(_rowCount,_colCount,_name,_mode,_aMatrix) 
 {
     this.name = _name;
@@ -151,7 +151,9 @@ function Matrix(_rowCount,_colCount,_name,_mode,_aMatrix)
     = function(k){
         var oRet=new Matrix(this.rowCount,this.colCount,"(Diagonal shifted("+this.name+"))")
         for(var i=0; i<this.rowCount;i++) {
-          oRet.plus(this.clone().getVerticalShiftMatrix((i+1),this.rowCount).multiply(this.clone().getShiftMatrix((i+1),this.rowCount).multiply(this.clone().saveTheOnlyRow(i))))
+          oRet.plus(this.clone().saveTheOnlyRow(i)
+                    .multiply(this.clone().getShiftMatrix((i+1),this.rowCount)
+                    ))
           //  oRet.plus((this.clone().saveTheOnlyRow(i)))
         }
         return oRet
@@ -197,8 +199,8 @@ function Matrix(_rowCount,_colCount,_name,_mode,_aMatrix)
     
 
 };
-//-------------------------------------------------------------------------------------
-    
+//>>Matrix  ---------------------------------------------------------------------------
+//=====================================================================================
     
     
 //пытаемся вычислить строку как формулу. если не получается оставляем строку как есть
@@ -216,18 +218,41 @@ function resizeAll() {
 
 //основная функция. вывод списка текущих дел
 function loadCurrentData() {
+//==Закладка Матрицы как числа ===================
    var A = new Matrix(6,6,"A","RANDOM_INT")//,[[1,2],[3,4]])
-   var B = A.clone().getShiftMatrix(3,A.rowCount)
+   var B = A.clone().getShiftMatrix(2,A.rowCount)
    //alert(A.multiply(B).v)
    //alert (A.v)
    //alert (A.v + "======" +A.diagShift(0).v)
-   B.show()
    A.clone().show()
-   A.clone().diagShift_Test(0).show()
+   A.clone().saveTheOnlyRow(1).show()
+   B.show()
+   A.clone().saveTheOnlyRow(1).multiply(B).show()
+   A.clone().diagShift_Test(1).show()
+   //A.clone().diagShift_Test(0).show()
     //B.multiply(A.clone()).show()
    //A.clone().saveTheOnlyRow(2).show()//document.getElementById("idMatrix"))
    //A.clone().saveTheOnlyColumn(2).show()
    //alert(A.transp().v)
+//==================================================
+
+ //Закладка Радиус скаляр, стусовка координат ======
+
+   var  newElem = document.createElement( "textarea" ); // создаем новый элемент
+   newElem.setAttribute('style','width: 100%')//; height: 100px')
+   newElem.setAttribute('rows',String(5))//; height: 100px')
+   document.getElementById("txt_2").appendChild( newElem );
+
+   var canvas = document.createElement('canvas');
+   document.getElementById("txt_2").appendChild( canvas );
+   if (canvas.getContext) {
+     var ctx = canvas.getContext('2d');
+
+     ctx.fillRect(25,25,100,100);
+     ctx.clearRect(45,45,60,60);
+     ctx.strokeRect(50,50,50,50);
+   }
+
 
 }  
 
@@ -240,7 +265,7 @@ function loadCurrentData() {
 
   </head>
   <body onload="loadCurrentData()" onresize = "resizeAll()" style="color: #633366; font-size:100%">
-	<h3 class="bg-primary p-a-1">Календарь: </h3>
+	<h3 class="bg-primary p-a-1">Обобщенные числа </h3>
 
 <style type="text/css">
 .tabs { width: 100%; padding: 0px; margin: 0 auto; }
@@ -275,11 +300,11 @@ function loadCurrentData() {
 
 	<div class="tabs">
 	  <input type="radio" name="inset" value="" id="tab_1" checked>
-	  <label for="tab_1">Закладка 1</label>
+	  <label for="tab_1">Матрицы как обобщ.числа</label>
 
 
 	  <input type="radio" name="inset" value="" id="tab_2">
-	  <label for="tab_2">Закладка 2</label>
+	  <label for="tab_2">Радиус скаляр, стусовка координат</label>
 	  <!--
 	  <input type="radio" name="inset" value="" id="tab_3">
 	  <label for="tab_3">Вкладка №3</label>
