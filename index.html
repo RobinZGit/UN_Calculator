@@ -1,8 +1,12 @@
 
 <!DOCTYPE html>
 <html>
-  <head>
-    <link href="css/styles.css" rel="stylesheet">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<!-- Настройка viewport -->
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+
 <script>
 
 //конструктор очисла ===========
@@ -80,19 +84,11 @@ function TUN(arr)  //ПОКА НЕ ВЫБРАСЫВАТЬ ЭТОТ КЛАСС
 
 
 </script>
-	  
 
 
- 
-<html>
-  <head>
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <!-- Настройка viewport -->
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-    <!-- Подключаем Bootstrap CSS 
-    <link rel="stylesheet" href="css/bootstrap.min.css" > -->
-	<title>Calendar</title>
+
+
 
 <style>"font-size: 100%" 
 </style>
@@ -321,21 +317,68 @@ function loadCurrentData() {
    //alert(A.transp().v)
 //==================================================
 
- //Закладка Радиус скаляр, стусовка координат ======
+ //==Закладка Радиус скаляр, стусовка координат ======
 
    var  newElem = document.createElement( "textarea" ); // создаем новый элемент
    newElem.setAttribute('style','width: 100%')//; height: 100px')
    newElem.setAttribute('rows',String(5))//; height: 100px')
    document.getElementById("txt_2").appendChild( newElem );
 
+   //график
    var canvas = document.createElement('canvas');
+   canvas.height = 40000;
+   canvas.width = 4000;
+
    document.getElementById("txt_2").appendChild( canvas );
    if (canvas.getContext) {
      var ctx = canvas.getContext('2d');
+     var tMax = 4000
+     var zMax = 4000
 
-     ctx.fillRect(25,25,100,100);
-     ctx.clearRect(45,45,60,60);
-     ctx.strokeRect(50,50,50,50);
+     //оси координат
+     ctx.beginPath();
+     ctx.moveTo(0,zMax)
+     ctx.lineTo(tMax,zMax)
+     ctx.moveTo(0,zMax)
+     ctx.lineTo(0,0)
+     ctx.stroke();
+
+     //Линии X(t) Y(t) X(t)vY(t)
+     function X(t) { return 0.02*t}
+     function Y(t) { return 0.03*t}
+
+     function stus(x,y){ //стусовка x v y
+       var sRet = '';
+       var sX = String(x.toFixed(10))
+       var sY = String(y.toFixed(10))
+       sX = sX.padStart(sY.length,'0')
+       sY = sY.padStart(sX.length,'0')
+       for (var i = 0; i<sX.length; i++)
+         sRet+=""+sX[i]+sY[i]
+       sRet = sRet.replace('..','.')
+       //alert(sRet)
+       return sRet
+     }
+
+     ctx.moveTo(0,zMax-X(0))
+     for (var t=0; t<tMax; t++){
+       ctx.lineTo(t,zMax-X(t))
+     }
+     ctx.stroke();
+     ctx.moveTo(0,zMax-Y(0))
+     for (var t=0; t<tMax; t++){
+       ctx.lineTo(t,zMax-Y(t))
+     }
+     ctx.stroke()
+     ctx.moveTo(0,zMax-stus(X(0),Y(0)))
+     for (var t=0; t<tMax; t++){
+       ctx.lineTo(t,zMax-stus(X(t),Y(t)))
+     }
+     ctx.stroke()
+
+     //ctx.fillRect(25,25,100,100);
+     //ctx.clearRect(45,45,60,60);
+     //ctx.strokeRect(50,50,50,50);
    }
 
 
@@ -348,7 +391,7 @@ function loadCurrentData() {
 </script>
 
 
-  </head>
+
   <body onload="loadCurrentData()" onresize = "resizeAll()" style="color: #633366; font-size:100%">
 	<h3 class="bg-primary p-a-1">Обобщенные числа </h3>
 
