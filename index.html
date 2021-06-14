@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html>
   <head>
@@ -5,7 +6,7 @@
 <script>
 
 //конструктор очисла ===========
-function TUN(arr)
+function TUN(arr)  //ПОКА НЕ ВЫБРАСЫВАТЬ ЭТОТ КЛАСС
 {   //очисло
 	this.v=arr.slice();
 	
@@ -76,29 +77,347 @@ function TUN(arr)
 };
 //==================
 
-function onload(){
-  un1 = new TUN([1,1]);
-  un2 = new TUN(un1.timesArr([1,1]).v);
-  alert(un2.v);
-  //alert(glOuN.randomInit(10).laplas(1.002).v);
-  //alert(glOuN.initByArr([1,1]).laplasVec(2).v);
-  //alert(glOuN.initByArr([1,1]).timesArr([1,1]).laplasVec(2).v);
-  //alert("m");
-}
+
 
 </script>
 	  
-</head>
-<body onload="onload()">
-	
-	
-  
-	
 
-    <h1>UniNumbers Calculator</h1>
 
-    <p>88</p>
-	
+ 
+<html>
+  <head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <!-- Настройка viewport -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Подключаем Bootstrap CSS 
+    <link rel="stylesheet" href="css/bootstrap.min.css" > -->
+	<title>Calendar</title>
+
+<style>"font-size: 100%" 
+</style>
+	<!--<script src="https://robinzgit.github.io/MacroRithmJS/data.js"></script>-->
+<script>
+
+
+
+//=============================================================================
+//класс Матрица (в тч вектор) --------------------------------------------------
+function Matrix(_rowCount,_colCount,_name,_mode,_aMatrix) 
+{
+    this.name = _name;
+    if (_aMatrix==null){
+        this.rowCount = _rowCount;
+        this.colCount = _colCount;
+        this.v = new Array(_rowCount);
+        for(var i = 0;i<_rowCount;i++) this.v[i] = new Array(_colCount);
+        for(var i = 0;i<_rowCount;i++)
+          for(var j = 0;j<_colCount;j++)
+              switch (_mode) { 
+                  case "RANDOM_INT": this.v[i][j] = Math.floor(Math.random()*100); break
+                  default: this.v[i][j] = 0; break
+              }
+    }else{
+       this.rowCount = _aMatrix.length
+       this.colCount = _aMatrix[0].length  
+       this.v = new Array(this.rowCount);
+        for(var i = 0;i<this.rowCount;i++) this.v[i] = new Array(this.colCount);
+        for(var i = 0;i<this.rowCount;i++)
+          for(var j = 0;j<this.colCount;j++) 
+             this.v[i][j] = _aMatrix[i][j]      
+    }
+    
+    //клонировать
+    this.clone = function(){
+        return  new Matrix(this.rowCount,this.colCount,"(clone "+this.name+")",null,this.v)
+    }
+    
+    //вывести матрицу на форму el,(например el = document.getElementById...)
+    this.show 
+    = function(el){
+      var nLen=0    
+      for(var i=0;i<this.rowCount;i++)
+        for(var j=0;j<this.colCount;j++)
+          if (String(this.v[i][j]).length > nLen) nLen =  String(this.v[i][j]).length
+      //
+      if (el!=null)
+         var newElem = el
+      else{
+           var  newElem = document.createElement( "textarea" ); // создаем новый элемент 
+          newElem.setAttribute('style','width: 100%')//; height: 100px')
+          newElem.setAttribute('rows',String(this.rowCount+3))//; height: 100px')
+          document.getElementById("txt_1").appendChild( newElem );
+
+      } 
+      newElem.value = this.name+" =\n"
+      for(var i=0;i<this.rowCount;i++){
+        for(var j=0;j<this.colCount;j++)
+          newElem.value =newElem.value + String(this.v[i][j]).padStart(nLen) + ' ; '
+        newElem.value += '\n'
+      }
+      newElem.value += '\n'
+    }
+    
+    //транспонирование
+    this.transp 
+    = function(){
+          var aRet = new Array(this.colCount);
+          for(var i = 0;i<this.colCount;i++) aRet[i] = new Array(this.rowCount);
+          for(var i = 0;i<this.rowCount;i++){ 
+            for(var j = 0;j<this.colCount;j++)
+              aRet[j][i]=this.v[i][j]; 
+          }
+          this.v=aRet
+          var cC = this.colCount
+          this.colCount=this.rowCount
+          this.rowCount=cC
+          this.name = "Transp(" + this.name +")"
+          
+       return this 
+    }
+    
+        //матричное сложение, параметр - объект того же класса
+    this.plus
+    = function(oMtrx){
+       if ((this.rowCount!=oMtrx.rowCount)||(this.colCount!=oMtrx.colCount)){
+           alert("Невозможно сложить "+this.name+" и " + oMtrx.name+" , несоответствие числа строк и столбцов.")
+           this.v=null
+       }else{
+          var aRet = new Array(this.rowCount);
+          for(var i = 0;i<this.rowCount;i++) aRet[i] = new Array(oMtrx.colCount);
+          for(var i = 0;i<this.rowCount;i++){
+            for(var j = 0;j<oMtrx.colCount;j++){  
+              aRet[i][j]=this.v[i][j]+oMtrx.v[i][j]   
+            }
+          }
+          this.v=aRet
+          this.name = "("+this.name +") + ("+oMtrx.name+")"
+       }
+       return this 
+    }
+    
+    //матричное умножение, параметр - объект того же класса
+    this.multiply
+    = function(oMtrx){
+       if ((this.rowCount!=oMtrx.colCount)||(this.colCount!=oMtrx.rowCount)){
+           alert("Невозможно умножить "+this.name+" на " + oMtrx.name+" , несоответствие числа строк и столбцов.")
+           this.v=null
+       }else{
+          var aRet = new Array(this.rowCount);
+          for(var i = 0;i<this.rowCount;i++) aRet[i] = new Array(oMtrx.colCount);
+          for(var i = 0;i<this.rowCount;i++){
+            for(var j = 0;j<oMtrx.colCount;j++){ 
+              aRet[i][j]=0; 
+              for(var k = 0;k<this.colCount;k++)
+                aRet[i][j]+=this.v[i][k]*oMtrx.v[k][j]   
+            }
+          }
+          this.v=aRet
+          this.name = "("+this.name +") * ("+oMtrx.name+")"
+       }
+       return this 
+    }
+    
+    //циклический сдвиг 1-й строки на k вправо, 2-й на k+1 вправо ... 
+    this.diagShift
+    = function(k){
+      var MatrixCircA = new Array(this.rowCount)    
+      for(var i=0;i<this.rowCount;i++){
+        MatrixCircA[i]= new Array(this.colCount)
+        for(var j=0;j<this.colCount;j++){
+            MatrixCircA[i][j]= this.v[i][((k+this.colCount+j-i)%this.colCount)]
+        }
+      }
+      this.v=MatrixCircA
+      return this    
+    }
+    //Циклический сдвиг всех строк матрицы на 0, 1 ... n-1   
+    this.diagShift_Test
+    = function(k){
+        var oRet=new Matrix(this.rowCount,this.colCount,"(Diagonal shifted("+this.name+"))")
+        for(var i=0; i<this.rowCount;i++) {
+          oRet.plus(this.clone().saveTheOnlyRow(i)
+                    .multiply(this.clone().getShiftMatrix((i+1),this.rowCount)
+                    ))
+          //  oRet.plus((this.clone().saveTheOnlyRow(i)))
+        }
+        return oRet
+    }
+
+    //обнулить все элеменнты кроме строки k 
+    this.saveTheOnlyRow 
+    = function(k){
+      for(var i=0;i<this.rowCount;i++)
+        for(var j=0;j<this.colCount;j++)
+            if(i!=k) this.v[i][j]=0
+      this.name = "(Saving only row №" + k + " of (" + this.name+"))"    
+      return this    
+    }
+    
+    //обнулить все элеменнты кроме столбца k 
+    this.saveTheOnlyColumn 
+    = function(k){
+      for(var i=0;i<this.rowCount;i++)
+        for(var j=0;j<this.colCount;j++)
+            if(j!=k) this.v[i][j]=0
+      this.name = "(Saving only column №" + k + " of (" + this.name +"))"       
+      return this    
+    }
+    
+    //Матрица сдвига строк на (k-1) вправо (квадратная матрица NDim * NDim)
+    this.getShiftMatrix
+    =function(k,NDim){
+        var oMtrx = new Matrix(NDim,NDim, "(Shift Matrix #"+k+")",null)
+        for (var i=0;i<NDim;i++)
+            oMtrx.v[(i-k+NDim+1)%NDim][i] = 1
+        return oMtrx  
+    }
+    
+    //аналогично предыдущему но сдвиг по вертикали
+    this.getVerticalShiftMatrix
+    =function(k,NDim){
+        var oMtrx = new Matrix(NDim,NDim, "(Vertical shift Matrix #"+k+")",null)
+        for (var i=0;i<NDim;i++)
+            oMtrx.v[i][(i-k+NDim+1)%NDim] = 1
+        return oMtrx  
+    }
+    
+
+};
+//>>Matrix  ---------------------------------------------------------------------------
+//=====================================================================================
+    
+    
+//пытаемся вычислить строку как формулу. если не получается оставляем строку как есть
+function ev(s) {
+	if (!((s.trim()) == ""))
+		try
+		{return eval(s);} catch(e) {return s;}
+	else return "";
+}
+
+function resizeAll() {
+	// button.style.width = document.body.clientWidth - 20; 
+	// GltxtSpeek.style.width = button.style.width;
+}
+
+//основная функция. вывод списка текущих дел
+function loadCurrentData() {
+//==Закладка Матрицы как числа ===================
+   var A = new Matrix(6,6,"A","RANDOM_INT")//,[[1,2],[3,4]])
+   var B = A.clone().getShiftMatrix(2,A.rowCount)
+   //alert(A.multiply(B).v)
+   //alert (A.v)
+   //alert (A.v + "======" +A.diagShift(0).v)
+   A.clone().show()
+   A.clone().saveTheOnlyRow(1).show()
+   B.show()
+   A.clone().saveTheOnlyRow(1).multiply(B).show()
+   A.clone().diagShift_Test(1).show()
+   //A.clone().diagShift_Test(0).show()
+    //B.multiply(A.clone()).show()
+   //A.clone().saveTheOnlyRow(2).show()//document.getElementById("idMatrix"))
+   //A.clone().saveTheOnlyColumn(2).show()
+   //alert(A.transp().v)
+//==================================================
+
+ //Закладка Радиус скаляр, стусовка координат ======
+
+   var  newElem = document.createElement( "textarea" ); // создаем новый элемент
+   newElem.setAttribute('style','width: 100%')//; height: 100px')
+   newElem.setAttribute('rows',String(5))//; height: 100px')
+   document.getElementById("txt_2").appendChild( newElem );
+
+   var canvas = document.createElement('canvas');
+   document.getElementById("txt_2").appendChild( canvas );
+   if (canvas.getContext) {
+     var ctx = canvas.getContext('2d');
+
+     ctx.fillRect(25,25,100,100);
+     ctx.clearRect(45,45,60,60);
+     ctx.strokeRect(50,50,50,50);
+   }
+
+
+}  
+
+
+
+
+
+</script>
+
+
+  </head>
+  <body onload="loadCurrentData()" onresize = "resizeAll()" style="color: #633366; font-size:100%">
+	<h3 class="bg-primary p-a-1">Обобщенные числа </h3>
+
+<style type="text/css">
+.tabs { width: 100%; padding: 0px; margin: 0 auto; }
+.tabs>input { display: none; }
+.tabs>div {
+    display: none;
+    padding: 12px;
+    border: 1px solid #C0C0C0;
+    background: #FFFFFF;
+}
+.tabs>label {
+    display: inline-block;
+    padding: 7px;
+    margin: 0 -5px -1px 0;
+    text-align: center;
+    color: #666666;
+    border: 1px solid #C0C0C0;
+    background: #E0E0E0;
+    cursor: pointer;
+}
+.tabs>input:checked + label {
+    color: #000000;
+    border: 1px solid #C0C0C0;
+    border-bottom: 1px solid #FFFFFF;
+    background: #FFFFFF;
+}
+#tab_1:checked ~ #txt_1,
+#tab_2:checked ~ #txt_2,
+#tab_3:checked ~ #txt_3,
+#tab_4:checked ~ #txt_4 { display: block; }
+</style>
+
+	<div class="tabs">
+	  <input type="radio" name="inset" value="" id="tab_1" checked>
+	  <label for="tab_1">Матрицы как обобщ.числа</label>
+
+
+	  <input type="radio" name="inset" value="" id="tab_2">
+	  <label for="tab_2">Радиус скаляр, стусовка координат</label>
+	  <!--
+	  <input type="radio" name="inset" value="" id="tab_3">
+	  <label for="tab_3">Вкладка №3</label>
+	  <input type="radio" name="inset" value="" id="tab_4">
+	  <label for="tab_4">Вкладка №4</label>
+	  -->
+	  <div id="txt_1">
+
+		<!--
+        <p>Произвольное содержимое...</p>
+        <p>Произвольное содержимое...</p>
+        <p>Произвольное содержимое...</p>
+		-->
+	  </div>
+	  <div id="txt_2">
+		<!--        <p>Вторая вкладка</p>   -->
+	  </div>
+	  <!--
+	  <div id="txt_3">
+	  <p>Размеры содержимого вкладок</p>
+	  <p>могут отличаться по высоте!</p>
+	  </div>
+	  <div id="txt_4">
+	  <img src="image/logo.png" width="533" height="77" alt="Лого">
+	  </div>
+	  -->
+	</div>
+
 
   </body>
-</html>		
+</html>
