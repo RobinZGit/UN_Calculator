@@ -323,8 +323,8 @@ function loadCurrentData() {
 
    //график
    var canvas = document.createElement('canvas');
-   canvas.height = 1000;
-   canvas.width = 1000;
+   canvas.height = 500;
+   canvas.width = 500;
 
    document.getElementById("txt_2").appendChild( canvas );
 
@@ -335,8 +335,11 @@ function loadCurrentData() {
 
    if (canvas.getContext) {
      var ctx = canvas.getContext('2d');
-     var tMax = canvas.width
-     var zMax = canvas.height
+     var kZ = 150 //растяжение по Z
+     var kT = 10 //растяжение по Z
+     var tMax = Math.floor(canvas.width)
+     var zMax = Math.floor(canvas.height)
+
 
      //оси координат
      ctx.beginPath();
@@ -347,8 +350,10 @@ function loadCurrentData() {
      ctx.stroke();
 
      //Линии X(t) Y(t) X(t)vY(t)
-     function X(t) { return 0.02*t}
-     function Y(t) { return 0.03*t}
+     function X(t) { return Math.sin(t)+1 //0.002*t
+     }
+     function Y(t) { return Math.cos(t)+1//0.003*t
+     }
 
      function stus(x,y){ //стусовка x v y
        var sRet = '';
@@ -363,14 +368,14 @@ function loadCurrentData() {
        return sRet
      }
 
-     ctx.moveTo(0,zMax-X(0))
+     ctx.moveTo(kT*0,zMax-X(0))
      for (var t=0; t<tMax; t++){
-       ctx.lineTo(t,zMax-X(t))
+       ctx.lineTo(kT*t,zMax-kZ*X(t))
      }
      ctx.stroke();
      ctx.moveTo(0,zMax-Y(0))
      for (var t=0; t<tMax; t++){
-       ctx.lineTo(t,zMax-Y(t))
+       ctx.lineTo(kT*t,zMax-kZ*Y(t))
      }
      ctx.stroke()
 
@@ -378,19 +383,31 @@ function loadCurrentData() {
      var yPrev = Y(0)
      var xCurr = X(0)
      var yCurr = Y(0)
-     ctx.moveTo(0,zMax-stus(xCurr,yCurr))
+     ctx.moveTo(kT*0,zMax-kZ*stus(xCurr,yCurr))
      for (var t=0; t<tMax; t++){
        xCurr = X(t)
        yCurr = Y(t)
        //alert((stus(xCurr,yCurr)-stus(xPrev,yPrev)))
-       if ((stus(xCurr,yCurr)-stus(xPrev,yPrev))>200){
-         textCanvas.value += 'xCurr='+xCurr+'   yCurr='+yCurr+ '   XvY='+stus(xCurr,yCurr)+'\n'
-                             +'xPrev='+xPrev+'   yPrev='+yPrev+ '   XvY='+stus(xPrev,yPrev)+'\n'
-                             +'-------------' +'\n'
+       var delta1 = 0.001
+       if ((stus(xCurr,yCurr)-stus(xPrev,yPrev))>delta1){
+         var nL =20
+         textCanvas.value += '  Скачок значения более '+delta1+'  ------------\n'
+                             +'xCurr='+String(xCurr).padEnd(nL," ")+'   yCurr='+String(yCurr).padEnd(nL," ")+ '   XvY='+String(stus(xCurr,yCurr).padEnd(nL," "))+'\n'
+                             +'xPrev='+String(xPrev).padEnd(nL," ")+'   yPrev='+String(yPrev).padEnd(nL," ")+ '   XvY='+String(stus(xPrev,yPrev).padEnd(nL," "))+'\n'
+                             +'----------------------------------------------\n'
          //textCanvas.setAttribute('rows',(textarea.value.match(/\n/g).length + 1)+3)//
-
        }
-       ctx.lineTo(t,zMax-stus(xCurr,yCurr))
+
+       if ((stus(xCurr,yCurr)-stus(xPrev,yPrev))==0){ //
+         var nL =20
+         textCanvas.value += '   Равенство предыдущего и следующего  ------------\n'
+                             +'xCurr='+String(xCurr).padEnd(nL," ")+'   yCurr='+String(yCurr).padEnd(nL," ")+ '   XvY='+String(stus(xCurr,yCurr).padEnd(nL," "))+'\n'
+                             +'xPrev='+String(xPrev).padEnd(nL," ")+'   yPrev='+String(yPrev).padEnd(nL," ")+ '   XvY='+String(stus(xPrev,yPrev).padEnd(nL," "))+'\n'
+                             +'----------------------------------------------\n'
+         //textCanvas.setAttribute('rows',(textarea.value.match(/\n/g).length + 1)+3)//
+       }
+
+       ctx.lineTo(kT*t,zMax-kZ*stus(xCurr,yCurr))
        xPrev = xCurr
        yPrev = yCurr
      }
