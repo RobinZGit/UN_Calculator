@@ -7,11 +7,11 @@
   <body>
 
 
-    <textarea id="x1">1</textarea>
+    <p><textarea id="x1" style="width:100%;height:25px;">1</textarea></p>
     *
-    <textarea id="x2">1</textarea>
-    <button onclick="calc()">=</button>
-    <textarea id="div1" ></textarea>
+    <p></p><textarea id="x2" style="width:100%;height:25px;">1</textarea></p>
+    <p></p><button onclick="calc()">=</button></p>
+    <p></p><textarea id="div1" style="width:100%;height:25px;" ></textarea></p>
 
 
     <canvas id="myChart"></canvas>
@@ -19,7 +19,17 @@
 
       //document.getElementById('div1').innerHTML = 45n ** 11111n;
       function calc(){
-        document.getElementById('div1').innerHTML = BigInt(document.getElementById('x1').value.replaceAll(' ','').replaceAll(';','0000000000')) * BigInt(document.getElementById('x2').value.replaceAll(' ','').replaceAll(';','0000000000'));
+        let ax1  = document.getElementById('x1').value.replaceAll(' ','').split(';');
+        let ax2  = document.getElementById('x2').value.replaceAll(' ','').split(';');
+        let l1max = 0;
+        let l2max = 0;
+        ax1.forEach(el => {if(el.length > l1max) l1max = el.length});
+        ax2.forEach(el => {if(el.length > l2max) l2max = el.length});
+        ax1.map(el => el.toString().padStart(l1max,'0'));
+        ax2.map(el => el.toString().padStart(l2max,'0'));
+        let zCount = l1max * l2max * 3;
+        document.getElementById('div1').innerHTML = BigInt(ax1.join(''.padStart(zCount,'0'))) * BigInt(ax2.join(''.padStart(zCount,'0')));
+   
       }
 
 
