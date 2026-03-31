@@ -25,10 +25,19 @@
         let l2max = 0;
         ax1.forEach(el => {if(el.length > l1max) l1max = el.length});
         ax2.forEach(el => {if(el.length > l2max) l2max = el.length});
-        ax1.map(el => el.toString().padStart(l1max,'0'));
-        ax2.map(el => el.toString().padStart(l2max,'0'));
+        let lmax = (l1max > l2max) ? l1max : l2max;
+        ax1.map(el => el.toString().padStart(lmax,'0'));
+        ax2.map(el => el.toString().padStart(lmax,'0'));
         let zCount = l1max * l2max * 3;
-        document.getElementById('div1').innerHTML = BigInt(ax1.join(''.padStart(zCount,'0'))) * BigInt(ax2.join(''.padStart(zCount,'0')));
+        let nBigI =  BigInt(ax1.join(''.padStart(zCount,'0')))
+                                                   * BigInt(ax2.join(''.padStart(zCount,'0')));
+        let sBigI = '*' + nBigI.toString();
+        document.getElementById('div1').innerHTML = 
+        
+        ax1.join(''.padStart(zCount,'0'))+'\n'+ax2.join(''.padStart(zCount,'0'))+'\n\n'+
+        '*'+(zCount+lmax)+sBigI 
+                                            //BigInt(ax1.join(''.padStart(zCount,'0')))
+                                            //       * BigInt(ax2.join(''.padStart(zCount,'0')));
    
       }
 
