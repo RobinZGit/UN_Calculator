@@ -26,16 +26,20 @@
         ax1.forEach(el => {if(el.length > l1max) l1max = el.length});
         ax2.forEach(el => {if(el.length > l2max) l2max = el.length});
         let lmax = (l1max > l2max) ? l1max : l2max;
-        ax1.map(el => el.toString().padStart(lmax,'%'));
-        ax2.map(el => el.toString().padStart(lmax,'%'));
-        let zCount = l1max * l2max * 3;
-        let nBigI =  BigInt(ax1.join(''.padStart(zCount,'%')).replaceAll('%','0'))
-                                                   * BigInt(ax2.join(''.padStart(zCount,'%')).replaceAll('%','0'));
-        let sBigI = '*' + nBigI.toString();
-        document.getElementById('div1').innerHTML = 
+        ax1.map(el => el.toString().padStart(l1max + l2max,'0'));
+        ax2.map(el => el.toString().padStart(l1max + l2max,'0'));
+        let zCount = (l1max + 1) * (l2max + 1);
+        let lone = zCount + l1max + l2max;
+        let nBigI =  BigInt(ax1.join(''.padStart(zCount,'0')))
+                      * BigInt(ax2.join(''.padStart(zCount,'0')));
+        let sBigI = `${nBigI}`;//'*' + nBigI.toString();
+        sBigI = sBigI.padStart(lone * Math.floor(sBigI.length / lone) + lone, '0');
+        let aret = [];
+        for (let i = 0; i < sBigI.length; i += lone) aret.push(+(sBigI.slice(i, i + lone)));
+        document.getElementById('div1').innerHTML = '*'+lone+'\n'+ aret.join(';')
         
-        ax1.join(''.padStart(zCount,'0'))+'\n'+ax2.join(''.padStart(zCount,'0'))+'\n\n'+
-        '*'+(zCount+lmax)+sBigI 
+        //ax1.join(''.padStart(zCount,'0'))+'\n'+ax2.join(''.padStart(zCount,'0'))+'\n\n'+
+        //'*'+(zCount+lmax)+sBigI 
                                             //BigInt(ax1.join(''.padStart(zCount,'0')))
                                             //       * BigInt(ax2.join(''.padStart(zCount,'0')));
    
