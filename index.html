@@ -26,11 +26,11 @@
         ax1.forEach(el => {if(el.length > l1max) l1max = el.length});
         ax2.forEach(el => {if(el.length > l2max) l2max = el.length});
         let lmax = (l1max > l2max) ? l1max : l2max;
-        ax1.map(el => el.toString().padStart(lmax,'0'));
-        ax2.map(el => el.toString().padStart(lmax,'0'));
+        ax1.map(el => el.toString().padStart(lmax,'%'));
+        ax2.map(el => el.toString().padStart(lmax,'%'));
         let zCount = l1max * l2max * 3;
-        let nBigI =  BigInt(ax1.join(''.padStart(zCount,'0')))
-                                                   * BigInt(ax2.join(''.padStart(zCount,'0')));
+        let nBigI =  BigInt(ax1.join(''.padStart(zCount,'%')).replaceAll('%','0'))
+                                                   * BigInt(ax2.join(''.padStart(zCount,'%')).replaceAll('%','0'));
         let sBigI = '*' + nBigI.toString();
         document.getElementById('div1').innerHTML = 
         
