@@ -137,6 +137,17 @@
     <fieldset>
       <legend>Входные данные</legend>
       <div class="row">
+        <div style="min-width: 16rem;">
+          <label style="display:flex; gap:0.5rem; align-items:center; cursor:pointer;">
+            <input type="checkbox" id="descOrder" style="width:auto; margin:0;" />
+            Ввод коэффициентов: от старшей степени к младшей
+          </label>
+          <p class="note" style="margin:0.35rem 0 0;">
+            Если включено, то запись <span class="mono">aₙ; …; a₁; a₀</span> будет автоматически преобразована в <span class="mono">a₀; a₁; …; aₙ</span>.
+          </p>
+        </div>
+      </div>
+      <div class="row">
         <div>
           <label for="p1">Коэффициенты P(x) (разделитель ; или ,)</label>
           <textarea id="p1" placeholder="1.5; -2; 0.25">1; 2; 1</textarea>
@@ -190,6 +201,12 @@
         .map((t) => t.trim())
         .filter(Boolean)
         .map((t) => Number(t));
+    }
+
+    /** @param {number[]} a */
+    function maybeReverseInputOrder(a) {
+      const desc = /** @type {HTMLInputElement} */ (document.getElementById("descOrder")).checked;
+      return desc ? a.slice().reverse() : a;
     }
 
     /**
@@ -556,8 +573,8 @@
 
       let raw1, raw2;
       try {
-        raw1 = parseCoeffs(document.getElementById("p1").value);
-        raw2 = parseCoeffs(document.getElementById("p2").value);
+        raw1 = maybeReverseInputOrder(parseCoeffs(document.getElementById("p1").value));
+        raw2 = maybeReverseInputOrder(parseCoeffs(document.getElementById("p2").value));
       } catch {
         out.innerHTML = "<section><h2>Ошибка</h2><p>Не удалось разобрать коэффициенты.</p></section>";
         return;
@@ -662,6 +679,7 @@
     }
 
     document.getElementById("btn").addEventListener("click", run);
+    document.getElementById("descOrder").addEventListener("change", () => run());
   </script>
 </body>
 </html>
