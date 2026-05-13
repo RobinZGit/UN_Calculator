@@ -283,7 +283,7 @@
     <div class="page-header-nav" aria-label="История успешных расчётов">
       <label class="nav-history-size" for="historyMaxStates" title="Сколько последних успешных расчётов хранить">
         <span>Шагов</span>
-        <input type="number" id="historyMaxStates" min="1" max="50" value="10" inputmode="numeric" />
+        <input type="number" id="historyMaxStates" min="1" max="500" value="100" inputmode="numeric" />
       </label>
       <button type="button" id="historyBack" title="Предыдущий расчёт" disabled>←</button>
       <button type="button" id="historyFwd" title="Следующий расчёт" disabled>→</button>
@@ -1738,12 +1738,14 @@
     let runHistoryIndex = -1;
 
     const HISTORY_MAX_LS_KEY = "un_poly_calc_history_max";
+    const HISTORY_MAX_DEFAULT = 100;
+    const HISTORY_MAX_CAP = 500;
 
     function getHistoryMax() {
       const el = /** @type {HTMLInputElement|null} */ (document.getElementById("historyMaxStates"));
-      const v = el ? parseInt(String(el.value), 10) : 10;
-      if (!Number.isFinite(v)) return 10;
-      return Math.max(1, Math.min(50, v));
+      const v = el ? parseInt(String(el.value), 10) : HISTORY_MAX_DEFAULT;
+      if (!Number.isFinite(v)) return HISTORY_MAX_DEFAULT;
+      return Math.max(1, Math.min(HISTORY_MAX_CAP, v));
     }
 
     function captureRunSnapshot() {
@@ -2604,7 +2606,7 @@
         const ls = localStorage.getItem(HISTORY_MAX_LS_KEY);
         if (ls != null) {
           const n = parseInt(ls, 10);
-          if (Number.isFinite(n)) historyMaxEl.value = String(Math.max(1, Math.min(50, n)));
+          if (Number.isFinite(n)) historyMaxEl.value = String(Math.max(1, Math.min(HISTORY_MAX_CAP, n)));
         }
       } catch {
         /* localStorage недоступен */
