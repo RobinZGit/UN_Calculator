@@ -224,10 +224,6 @@
           <label for="nDec">n — знаков после запятой при округлении</label>
           <input type="number" id="nDec" min="0" max="30" value="2" />
         </div>
-        <div>
-          <label for="maxLong">Макс. длина числа для столбика (символов)</label>
-          <input type="number" id="maxLong" min="30" max="5000" value="180" />
-        </div>
       </div>
       <div class="row" style="margin-bottom: 0.25rem;">
         <div>
@@ -732,6 +728,7 @@
     }
 
     let polyChart = null;
+    let maxLongState = 180;
 
     function resetOutputs() {
       const out = document.getElementById("out");
@@ -850,7 +847,9 @@
       const out = document.getElementById("out");
       out.innerHTML = "";
       const n = Math.max(0, Math.min(30, parseInt(document.getElementById("nDec").value, 10) || 0));
-      const maxLong = Math.max(30, Math.min(5000, parseInt(document.getElementById("maxLong").value, 10) || 180));
+      const maxLongEl = /** @type {HTMLInputElement|null} */ (document.getElementById("maxLong"));
+      if (maxLongEl) maxLongState = parseInt(maxLongEl.value, 10) || maxLongState;
+      const maxLong = Math.max(30, Math.min(5000, maxLongState));
       const opExpr = String((/** @type {HTMLInputElement} */ (document.getElementById("opExpr"))).value || "").trim();
 
       let raw1, raw2;
@@ -965,6 +964,7 @@
         html += `</section>`;
 
         html += `<details><summary style="cursor:pointer; color: #5b9fd4; font-weight: 600; margin: 0.25rem 0 0.5rem;">Окно умножения «столбиком» (|P(B)| и |Q(B)|)</summary><section style="margin-top:0.75rem;">`;
+        html += `<div class="row" style="margin:0 0 0.75rem;"><div style="max-width: 22rem;"><label for="maxLong">Макс. длина числа для столбика (символов)</label><input type="number" id="maxLong" min="30" max="5000" value="${maxLong}" /></div></div>`;
         const ua = A < 0n ? (-A).toString(10) : A.toString(10);
         const ub = Cc < 0n ? (-Cc).toString(10) : Cc.toString(10);
         const longMul = renderLongMulTable(ua, ub, maxLong);
@@ -982,6 +982,10 @@
       }
 
       out.innerHTML = html;
+      const newMaxLongEl = /** @type {HTMLInputElement|null} */ (document.getElementById("maxLong"));
+      if (newMaxLongEl) {
+        newMaxLongEl.addEventListener("change", () => run());
+      }
 
       // графики обновляем после расчёта, чтобы n/округление совпадали с текстом
       if (typeof Chart !== "undefined") {
