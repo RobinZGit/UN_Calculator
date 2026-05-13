@@ -177,6 +177,29 @@
       color: var(--text);
     }
 
+    /** Ряд «Копировать / Вставить» под полями коэффициентов (кнопки не на всю ширину). */
+    .poly-io-btns {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.35rem;
+    }
+    .poly-io-btns .btn-poly-io {
+      width: auto;
+      min-width: auto;
+      margin-top: 0;
+      padding: 0.35rem 0.75rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      background: linear-gradient(180deg, #2a3545, #1f2836);
+      border-color: var(--border);
+      color: var(--text);
+    }
+    .poly-io-btns .btn-poly-io:hover {
+      filter: brightness(1.12);
+      border-color: rgba(91, 159, 212, 0.45);
+    }
+
     .charts {
       margin-top: 1rem;
       max-width: none;
@@ -202,7 +225,7 @@
   </style>
 </head>
 <body>
-  <h1>Умножение многочленов и то же самое через «длинное» целое <span class="form-version">v1</span></h1>
+  <h1>Умножение многочленов и то же самое через «длинное» целое <span class="form-version">v2</span></h1>
   <p class="lead">
     Коэффициенты задаются от младшей степени к старшей: <span class="mono">a₀; a₁; a₂ …</span> (между ними — только <span class="mono">;</span>, в числе — только цифры и точка) для
     <span class="mono">a₀ + a₁x + a₂x² + …</span>.
@@ -212,7 +235,7 @@
 
   <div class="grid">
     <fieldset>
-      <legend>Входные данные <span class="form-version">v1</span></legend>
+      <legend>Входные данные <span class="form-version">v2</span></legend>
       <div class="row">
         <div style="min-width: 16rem;">
           <label class="switch">
@@ -230,10 +253,18 @@
         <div>
           <label for="p1">Коэффициенты P(x) (только цифры, . ; + - и пробелы)</label>
           <textarea id="p1" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="1.5; -2; 0.25">1; 2; 1</textarea>
+          <div class="poly-io-btns" role="group" aria-label="Буфер обмена: P(x)">
+            <button type="button" class="btn-poly-io" data-poly-io="copy" data-target="p1">Копировать</button>
+            <button type="button" class="btn-poly-io" data-poly-io="paste" data-target="p1">Вставить</button>
+          </div>
         </div>
         <div>
           <label for="p2">Коэффициенты Q(x) (только цифры, . ; + - и пробелы)</label>
           <textarea id="p2" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="1; -1">1; -1</textarea>
+          <div class="poly-io-btns" role="group" aria-label="Буфер обмена: Q(x)">
+            <button type="button" class="btn-poly-io" data-poly-io="copy" data-target="p2">Копировать</button>
+            <button type="button" class="btn-poly-io" data-poly-io="paste" data-target="p2">Вставить</button>
+          </div>
         </div>
       </div>
       <div class="row">
@@ -244,6 +275,10 @@
         <div>
           <label for="compH">x = … (коэффициенты h: цифры, . ; + -)</label>
           <input id="compH" type="text" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="например: 0; 1 (это x) или 1; 1 (это 1+x)" />
+          <div class="poly-io-btns" role="group" aria-label="Буфер обмена: композиция h">
+            <button type="button" class="btn-poly-io" data-poly-io="copy" data-target="compH">Копировать</button>
+            <button type="button" class="btn-poly-io" data-poly-io="paste" data-target="compH">Вставить</button>
+          </div>
         </div>
       </div>
       <div class="row" style="margin-bottom: 0.25rem;">
@@ -279,16 +314,25 @@
         <div>
           <label for="p3">Коэффициенты результата (в том же формате)</label>
           <textarea id="p3" readonly placeholder="Нажмите «Выполнить операцию…», чтобы увидеть коэффициенты результата"></textarea>
+          <div class="poly-io-btns" role="group" aria-label="Копировать результат">
+            <button type="button" class="btn-poly-io" data-poly-io="copy" data-target="p3">Копировать</button>
+          </div>
         </div>
       </div>
       <div class="row" style="margin-top: 0.25rem;">
         <div>
           <label for="p1c">P(h(x)) (после композиции)</label>
           <textarea id="p1c" readonly placeholder="Заполнится, если поле композиции не пусто"></textarea>
+          <div class="poly-io-btns" role="group" aria-label="Копировать P(h)">
+            <button type="button" class="btn-poly-io" data-poly-io="copy" data-target="p1c">Копировать</button>
+          </div>
         </div>
         <div>
           <label for="p2c">Q(h(x)) (после композиции)</label>
           <textarea id="p2c" readonly placeholder="Заполнится, если поле композиции не пусто"></textarea>
+          <div class="poly-io-btns" role="group" aria-label="Копировать Q(h)">
+            <button type="button" class="btn-poly-io" data-poly-io="copy" data-target="p2c">Копировать</button>
+          </div>
         </div>
       </div>
     </fieldset>
@@ -1213,6 +1257,75 @@
     }
 
     /**
+     * Копирует текущее значение поля в буфер обмена (коэффициенты, композиция или только для чтения — результат / P(h) / Q(h)).
+     * Сначала пробует Clipboard API (нужен HTTPS или localhost), иначе — выделение + document.execCommand("copy").
+     * @param {string} id — "p1" | "p2" | "compH" | "p3" | "p1c" | "p2c"
+     */
+    async function copyPolyFieldToClipboard(id) {
+      const el = /** @type {HTMLInputElement|HTMLTextAreaElement|null} */ (document.getElementById(id));
+      if (!el) return;
+      const text = el.value;
+      try {
+        if (typeof navigator !== "undefined" && navigator.clipboard && window.isSecureContext && typeof navigator.clipboard.writeText === "function") {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+      } catch {
+        /* fallback ниже */
+      }
+      try {
+        el.focus();
+        el.select();
+        const len = text.length;
+        if (typeof el.setSelectionRange === "function") el.setSelectionRange(0, len);
+        const ok = document.execCommand("copy");
+        if (!ok) throw new Error("copy");
+      } catch {
+        alert("Не удалось скопировать в буфер. Выделите текст в поле и нажмите Ctrl+C.");
+      }
+    }
+
+    /**
+     * Вставляет текст из буфера в поле, пропуская его через {@link sanitizePolyInput} (как при ручном вводе).
+     * Генерирует событие input, чтобы сработали санитайзер и сброс результатов.
+     * @param {string} id — "p1" | "p2" | "compH"
+     */
+    async function pastePolyFieldFromClipboard(id) {
+      let raw = "";
+      try {
+        if (typeof navigator !== "undefined" && navigator.clipboard && window.isSecureContext && typeof navigator.clipboard.readText === "function") {
+          raw = await navigator.clipboard.readText();
+        } else {
+          alert("Чтение буфера обмена недоступно: откройте страницу по HTTPS или разрешите доступ к буферу в браузере.");
+          return;
+        }
+      } catch {
+        alert("Не удалось прочитать буфер обмена. Разрешите вставку для этого сайта в настройках браузера.");
+        return;
+      }
+      const el = /** @type {HTMLInputElement|HTMLTextAreaElement|null} */ (document.getElementById(id));
+      if (!el) return;
+      el.value = sanitizePolyInput(raw);
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+      el.focus();
+    }
+
+    /**
+     * Вешает обработчики на кнопки с классом btn-poly-io и атрибутами data-poly-io / data-target.
+     */
+    function bindPolyClipboardButtons() {
+      document.querySelectorAll("button.btn-poly-io[data-target][data-poly-io]").forEach((btn) => {
+        const target = btn.getAttribute("data-target");
+        const mode = btn.getAttribute("data-poly-io");
+        if (!target || (mode !== "copy" && mode !== "paste")) return;
+        btn.addEventListener("click", () => {
+          if (mode === "copy") void copyPolyFieldToClipboard(target);
+          else void pastePolyFieldFromClipboard(target);
+        });
+      });
+    }
+
+    /**
      * Включает drag-and-drop текста между полями коэффициентов на устройствах с точным указателем (десктоп).
      * На сенсорных планшетах без hover не подключается, чтобы не ломать выделение и ввод.
      * @param {string} id — id textarea
@@ -1564,6 +1677,7 @@
     bindPolyInputSanitizer("p1");
     bindPolyInputSanitizer("p2");
     bindPolyInputSanitizer("compH");
+    bindPolyClipboardButtons();
 
     enableCoeffTextareaDnd("p1");
     enableCoeffTextareaDnd("p2");
