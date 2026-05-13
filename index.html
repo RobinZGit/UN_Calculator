@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Умножение многочленов и длинная арифметика</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <style>
     :root {
       --bg: #0f1419;
@@ -99,6 +100,26 @@
     table.longmul { border-collapse: collapse; font-family: ui-monospace, Consolas, monospace; font-size: 0.75rem; margin-top: 0.75rem; }
     table.longmul td { padding: 0.08rem 0.12rem; text-align: center; min-width: 0.85rem; }
     table.longmul .sumline td { border-top: 2px solid var(--text); padding-top: 0.25rem; }
+
+    .charts {
+      margin-top: 1rem;
+      max-width: 58rem;
+    }
+    .charts section {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--panel);
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    .charts h2 { font-size: 1rem; margin: 0 0 0.75rem; color: var(--accent); }
+    .charts canvas {
+      width: 100%;
+      height: 260px;
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
   </style>
 </head>
 <body>
@@ -147,6 +168,32 @@
   </div>
 
   <div class="out" id="out"></div>
+
+  <div class="charts" id="charts">
+    <section>
+      <h2>Графики P(x), Q(x) и произведения</h2>
+      <div class="row">
+        <div>
+          <label for="xMin">x min</label>
+          <input type="number" id="xMin" value="-5" step="0.5" />
+        </div>
+        <div>
+          <label for="xMax">x max</label>
+          <input type="number" id="xMax" value="5" step="0.5" />
+        </div>
+        <div>
+          <label for="xPts">Точек</label>
+          <input type="number" id="xPts" value="201" min="20" max="2000" />
+        </div>
+      </div>
+      <p class="note" style="margin-top:0">Строится по округлённым коэффициентам (до n знаков).</p>
+      <canvas id="chartP"></canvas>
+      <div style="height: 0.75rem"></div>
+      <canvas id="chartQ"></canvas>
+      <div style="height: 0.75rem"></div>
+      <canvas id="chartPQ"></canvas>
+    </section>
+  </div>
 
   <script>
     /** @param {string} s */
@@ -425,6 +472,96 @@
       return parts.length ? parts.join(" + ").replace(/\+ -/g, "- ") : "0";
     }
 
+    /** @param {number[]} coeffs @param {number} x */
+    function polyEvalFloat(coeffs, x) {
+      // Горнер: a0 + a1 x + ... = (...((an)x + a{n-1})x + ... + a0)
+      let s = 0;
+      for (let i = coeffs.length - 1; i >= 0; i--) s = s * x + coeffs[i];
+      return s;
+    }
+
+    /** @param {number[]} p @param {number[]} q */
+    function polyMulFloat(p, q) {
+      const len = p.length + q.length - 1;
+      const r = Array.from({ length: len }, () => 0);
+      for (let i = 0; i < p.length; i++) {
+        for (let j = 0; j < q.length; j++) {
+          r[i + j] += p[i] * q[j];
+        }
+      }
+      return r;
+    }
+
+    /** @type {import('chart.js').Chart | null} */
+    let chartP = null;
+    /** @type {import('chart.js').Chart | null} */
+    let chartQ = null;
+    /** @type {import('chart.js').Chart | null} */
+    let chartPQ = null;
+
+    function setOrUpdateChart(canvasId, title, xs, ys, color, chartRef) {
+      const ctx = /** @type {HTMLCanvasElement} */ (document.getElementById(canvasId)).getContext("2d");
+      const data = {
+        labels: xs,
+        datasets: [
+          {
+            label: title,
+            data: ys,
+            borderColor: color,
+            backgroundColor: "rgba(0,0,0,0)",
+            borderWidth: 2,
+            pointRadius: 0,
+            tension: 0.15,
+          },
+        ],
+      };
+      const options = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { color: "#e7ecf3" } },
+          title: { display: false },
+        },
+        scales: {
+          x: { ticks: { color: "#9aa8b9" }, grid: { color: "rgba(154,168,185,0.12)" } },
+          y: { ticks: { color: "#9aa8b9" }, grid: { color: "rgba(154,168,185,0.12)" } },
+        },
+      };
+      if (chartRef.value) {
+        chartRef.value.data = data;
+        chartRef.value.options = options;
+        chartRef.value.update();
+        return;
+      }
+      // eslint-disable-next-line no-undef
+      chartRef.value = new Chart(ctx, { type: "line", data, options });
+    }
+
+    function updateCharts(rounded1, rounded2, n) {
+      const xMin = Number(document.getElementById("xMin").value);
+      const xMax = Number(document.getElementById("xMax").value);
+      const pts = Math.max(20, Math.min(2000, parseInt(document.getElementById("xPts").value, 10) || 201));
+      if (!Number.isFinite(xMin) || !Number.isFinite(xMax) || xMax === xMin) return;
+
+      const xs = [];
+      const ysP = [];
+      const ysQ = [];
+      const pq = polyMulFloat(rounded1, rounded2).map((v) => roundFixed(v, n));
+      const ysPQ = [];
+
+      for (let i = 0; i < pts; i++) {
+        const x = xMin + ((xMax - xMin) * i) / (pts - 1);
+        xs.push(x);
+        ysP.push(polyEvalFloat(rounded1, x));
+        ysQ.push(polyEvalFloat(rounded2, x));
+        ysPQ.push(polyEvalFloat(pq, x));
+      }
+
+      setOrUpdateChart("chartP", "P(x)", xs, ysP, "#5b9fd4", { get value() { return chartP; }, set value(v) { chartP = v; } });
+      setOrUpdateChart("chartQ", "Q(x)", xs, ysQ, "#6bcb77", { get value() { return chartQ; }, set value(v) { chartQ = v; } });
+      setOrUpdateChart("chartPQ", "P(x)·Q(x)", xs, ysPQ, "#ff6b6b", { get value() { return chartPQ; }, set value(v) { chartPQ = v; } });
+    }
+
     function run() {
       const out = document.getElementById("out");
       out.innerHTML = "";
@@ -531,9 +668,17 @@
       html += `</section>`;
 
       out.innerHTML = html;
+
+      // графики обновляем после расчёта, чтобы n/округление совпадали с текстом
+      if (typeof Chart !== "undefined") {
+        updateCharts(rounded1, rounded2, n);
+      }
     }
 
     document.getElementById("btn").addEventListener("click", run);
+    document.getElementById("xMin").addEventListener("change", () => run());
+    document.getElementById("xMax").addEventListener("change", () => run());
+    document.getElementById("xPts").addEventListener("change", () => run());
   </script>
 </body>
 </html>
