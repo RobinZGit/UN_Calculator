@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Умножение многочленов и длинная арифметика</title>
-  <!-- Локальная копия Chart.js — график работает без интернета (рядом с index.html должен лежать vendor/chart.umd.min.js). -->
+  <!-- Chart.js из vendor/ — интерактивный график; если скрипт не загрузится, график рисуется на Canvas 2D в коде страницы. -->
   <script src="vendor/chart.umd.min.js"></script>
   <style>
     :root {
@@ -1231,6 +1231,7 @@
         polyChart.destroy();
         polyChart = null;
       }
+      clearPolyChartCanvas();
     }
 
     /**
@@ -1366,13 +1367,212 @@
     }
 
     /**
-     * Обновляет или создаёт линейный график Chart.js: по оси X индекс коэффициента, по Y значение (float).
-     * Три серии — P, Q и результат операции (уже приведённые к числам для отображения).
+     * Очищает canvas графика коэффициентов (при сбросе или при переходе на Chart.js).
+     * @param {HTMLCanvasElement|null} [canvasEl]
+     */
+    function clearPolyChartCanvas(canvasEl) {
+      const canvas = canvasEl || /** @type {HTMLCanvasElement|null} */ (document.getElementById("polyChart"));
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    /**
+     * Линейный график трёх серий коэффициентов без Chart.js (чистый Canvas 2D).
+     * Используется, если библиотека Chart не загрузилась (нет файла vendor, ошибка сети и т.д.).
+     * @param {number[]} pCoeffs
+     * @param {number[]} qCoeffs
+     * @param {number[]} rCoeffs
+     */
+    function drawCoeffChartCanvas2D(pCoeffs, qCoeffs, rCoeffs) {
+      const canvas = /** @type {HTMLCanvasElement|null} */ (document.getElementById("polyChart"));
+      if (!canvas) return;
+      const parent = canvas.parentElement;
+      const cssW = Math.max(280, parent ? parent.clientWidth : 600);
+      const cssH = 260;
+      const dpr = typeof window !== "undefined" && window.devicePixelRatio ? window.devicePixelRatio : 1;
+      canvas.style.width = `${cssW}px`;
+      canvas.style.height = `${cssH}px`;
+      canvas.width = Math.floor(cssW * dpr);
+      canvas.height = Math.floor(cssH * dpr);
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      const padL = 52;
+      const padR = 12;
+      const padT = 28;
+      const padB = 52;
+      const plotW = cssW - padL - padR;
+      const plotH = cssH - padT - padB;
+
+      const maxLen = Math.max(1, pCoeffs.length, qCoeffs.length, rCoeffs.length);
+      const xs = Array.from({ length: maxLen }, (_, i) => i);
+
+      /** @type {(number|null)[]} */
+      const ysP = xs.map((i) => (i < pCoeffs.length ? pCoeffs[i] : null));
+      /** @type {(number|null)[]} */
+      const ysQ = xs.map((i) => (i < qCoeffs.length ? qCoeffs[i] : null));
+      /** @type {(number|null)[]} */
+      const ysR = xs.map((i) => (i < rCoeffs.length ? rCoeffs[i] : null));
+
+      let ymin = Infinity;
+      let ymax = -Infinity;
+      for (const arr of [ysP, ysQ, ysR]) {
+        for (const v of arr) {
+          if (v != null && Number.isFinite(v)) {
+            if (v < ymin) ymin = v;
+            if (v > ymax) ymax = v;
+          }
+        }
+      }
+      if (!Number.isFinite(ymin) || !Number.isFinite(ymax)) {
+        ymin = -1;
+        ymax = 1;
+      }
+      if (ymin === ymax) {
+        ymin -= 1;
+        ymax += 1;
+      }
+      const yPad = (ymax - ymin) * 0.08 || 0.1;
+      ymin -= yPad;
+      ymax += yPad;
+
+      const bg = "#0d1117";
+      const grid = "rgba(154,168,185,0.12)";
+      const tick = "#9aa8b9";
+      const title = "#9aa8b9";
+
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, cssW, cssH);
+
+      const xToPx = (i) => padL + (maxLen <= 1 ? plotW / 2 : (i / (maxLen - 1)) * plotW);
+      const yToPx = (y) => padT + plotH - ((y - ymin) / (ymax - ymin)) * plotH;
+
+      ctx.strokeStyle = grid;
+      ctx.lineWidth = 1;
+      const xTicks = Math.min(maxLen, 12);
+      for (let t = 0; t < xTicks; t++) {
+        const i = Math.round((t / (xTicks - 1 || 1)) * (maxLen - 1));
+        const x = xToPx(i) + 0.5;
+        ctx.beginPath();
+        ctx.moveTo(x, padT);
+        ctx.lineTo(x, padT + plotH);
+        ctx.stroke();
+      }
+      const yTicks = 5;
+      for (let t = 0; t <= yTicks; t++) {
+        const yv = ymin + (t / yTicks) * (ymax - ymin);
+        const y = yToPx(yv) + 0.5;
+        ctx.beginPath();
+        ctx.moveTo(padL, y);
+        ctx.lineTo(padL + plotW, y);
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = tick;
+      ctx.font = "11px system-ui,Segoe UI,sans-serif";
+      ctx.textAlign = "center";
+      for (let t = 0; t < xTicks; t++) {
+        const i = Math.round((t / (xTicks - 1 || 1)) * (maxLen - 1));
+        ctx.fillText(String(i), xToPx(i), padT + plotH + 16);
+      }
+      ctx.textAlign = "right";
+      ctx.textBaseline = "middle";
+      for (let t = 0; t <= yTicks; t++) {
+        const yv = ymin + (t / yTicks) * (ymax - ymin);
+        const y = yToPx(yv);
+        const label = Number.isInteger(yv) && Math.abs(yv) > 1e6 ? yv.toExponential(1) : yv.toFixed(4).replace(/\.?0+$/, "");
+        ctx.fillText(label, padL - 6, y);
+      }
+
+      ctx.fillStyle = title;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      ctx.font = "12px system-ui,Segoe UI,sans-serif";
+      ctx.fillText("Индекс коэффициента", padL + plotW / 2, padT + plotH + 28);
+
+      /**
+       * @param {(number|null)[]} ys
+       * @param {string} stroke
+       */
+      function strokeSeries(ys, stroke) {
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = 2;
+        ctx.lineJoin = "round";
+        ctx.beginPath();
+        let penUp = true;
+        for (let i = 0; i < maxLen; i++) {
+          const v = ys[i];
+          if (v == null || !Number.isFinite(v)) {
+            penUp = true;
+            continue;
+          }
+          const x = xToPx(i);
+          const y = yToPx(v);
+          if (penUp) {
+            ctx.moveTo(x, y);
+            penUp = false;
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+        ctx.stroke();
+        ctx.fillStyle = stroke;
+        for (let i = 0; i < maxLen; i++) {
+          const v = ys[i];
+          if (v == null || !Number.isFinite(v)) continue;
+          ctx.beginPath();
+          ctx.arc(xToPx(i), yToPx(v), 2.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      strokeSeries(ysP, "#5b9fd4");
+      strokeSeries(ysQ, "#6bcb77");
+      strokeSeries(ysR, "#ff6b6b");
+
+      const legend = [
+        { c: "#5b9fd4", t: "P" },
+        { c: "#6bcb77", t: "Q" },
+        { c: "#ff6b6b", t: "Результат" },
+      ];
+      let lx = padL;
+      const ly = 8;
+      ctx.textBaseline = "middle";
+      ctx.font = "12px system-ui,Segoe UI,sans-serif";
+      for (const { c, t } of legend) {
+        ctx.fillStyle = c;
+        ctx.fillRect(lx, ly - 5, 10, 10);
+        ctx.fillStyle = title;
+        ctx.textAlign = "left";
+        const tw = ctx.measureText(t).width;
+        ctx.fillText(t, lx + 14, ly);
+        lx += 14 + tw + 18;
+      }
+
+      ctx.fillStyle = "rgba(154,168,185,0.5)";
+      ctx.font = "10px system-ui,Segoe UI,sans-serif";
+      ctx.textAlign = "right";
+      ctx.fillText("Canvas (без Chart.js)", cssW - 6, cssH - 8);
+    }
+
+    /**
+     * Обновляет график коэффициентов: при наличии Chart.js — как раньше; иначе рисует те же три серии на Canvas 2D ({@link drawCoeffChartCanvas2D}).
      * @param {number[]} pCoeffs
      * @param {number[]} qCoeffs
      * @param {number[]} rCoeffs
      */
     function updateCharts(pCoeffs, qCoeffs, rCoeffs) {
+      if (typeof Chart === "undefined") {
+        drawCoeffChartCanvas2D(pCoeffs, qCoeffs, rCoeffs);
+        return;
+      }
+
+      clearPolyChartCanvas();
       const maxLen = Math.max(pCoeffs.length, qCoeffs.length, rCoeffs.length);
       const xs = Array.from({ length: maxLen }, (_, i) => i);
       const ysP = xs.map((i) => (i < pCoeffs.length ? pCoeffs[i] : null));
@@ -1625,10 +1825,8 @@
         newMaxLongEl.addEventListener("input", () => run());
       }
 
-      // графики обновляем после расчёта, чтобы n/округление совпадали с текстом
-      if (typeof Chart !== "undefined") {
-        updateCharts(pRoundedCoeffs, qRoundedCoeffs, resultRounded);
-      }
+      // графики обновляем после расчёта; при отсутствии Chart.js — отрисовка на Canvas 2D
+      updateCharts(pRoundedCoeffs, qRoundedCoeffs, resultRounded);
     }
 
     document.getElementById("btn").addEventListener("click", run);
