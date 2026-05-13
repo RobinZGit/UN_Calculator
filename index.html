@@ -187,11 +187,7 @@
         </div>
       </div>
       <p class="note" style="margin-top:0">Строится по округлённым коэффициентам (до n знаков).</p>
-      <canvas id="chartP"></canvas>
-      <div style="height: 0.75rem"></div>
-      <canvas id="chartQ"></canvas>
-      <div style="height: 0.75rem"></div>
-      <canvas id="chartPQ"></canvas>
+      <canvas id="polyChart" height="260"></canvas>
     </section>
   </div>
 
@@ -492,50 +488,7 @@
       return r;
     }
 
-    /** @type {import('chart.js').Chart | null} */
-    let chartP = null;
-    /** @type {import('chart.js').Chart | null} */
-    let chartQ = null;
-    /** @type {import('chart.js').Chart | null} */
-    let chartPQ = null;
-
-    function setOrUpdateChart(canvasId, title, xs, ys, color, chartRef) {
-      const ctx = /** @type {HTMLCanvasElement} */ (document.getElementById(canvasId)).getContext("2d");
-      const data = {
-        labels: xs,
-        datasets: [
-          {
-            label: title,
-            data: ys,
-            borderColor: color,
-            backgroundColor: "rgba(0,0,0,0)",
-            borderWidth: 2,
-            pointRadius: 0,
-            tension: 0.15,
-          },
-        ],
-      };
-      const options = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { labels: { color: "#e7ecf3" } },
-          title: { display: false },
-        },
-        scales: {
-          x: { ticks: { color: "#9aa8b9" }, grid: { color: "rgba(154,168,185,0.12)" } },
-          y: { ticks: { color: "#9aa8b9" }, grid: { color: "rgba(154,168,185,0.12)" } },
-        },
-      };
-      if (chartRef.value) {
-        chartRef.value.data = data;
-        chartRef.value.options = options;
-        chartRef.value.update();
-        return;
-      }
-      // eslint-disable-next-line no-undef
-      chartRef.value = new Chart(ctx, { type: "line", data, options });
-    }
+    let polyChart = null;
 
     function updateCharts(rounded1, rounded2, n) {
       const xMin = Number(document.getElementById("xMin").value);
@@ -557,9 +510,59 @@
         ysPQ.push(polyEvalFloat(pq, x));
       }
 
-      setOrUpdateChart("chartP", "P(x)", xs, ysP, "#5b9fd4", { get value() { return chartP; }, set value(v) { chartP = v; } });
-      setOrUpdateChart("chartQ", "Q(x)", xs, ysQ, "#6bcb77", { get value() { return chartQ; }, set value(v) { chartQ = v; } });
-      setOrUpdateChart("chartPQ", "P(x)·Q(x)", xs, ysPQ, "#ff6b6b", { get value() { return chartPQ; }, set value(v) { chartPQ = v; } });
+      const ctx = /** @type {HTMLCanvasElement} */ (document.getElementById("polyChart")).getContext("2d");
+      const data = {
+        labels: xs,
+        datasets: [
+          {
+            label: "P(x)",
+            data: ysP,
+            borderColor: "#5b9fd4",
+            backgroundColor: "rgba(0,0,0,0)",
+            borderWidth: 2,
+            pointRadius: 0,
+            tension: 0.15,
+          },
+          {
+            label: "Q(x)",
+            data: ysQ,
+            borderColor: "#6bcb77",
+            backgroundColor: "rgba(0,0,0,0)",
+            borderWidth: 2,
+            pointRadius: 0,
+            tension: 0.15,
+          },
+          {
+            label: "P(x)·Q(x)",
+            data: ysPQ,
+            borderColor: "#ff6b6b",
+            backgroundColor: "rgba(0,0,0,0)",
+            borderWidth: 2,
+            pointRadius: 0,
+            tension: 0.15,
+          },
+        ],
+      };
+      const options = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { color: "#e7ecf3" } },
+          title: { display: false },
+        },
+        scales: {
+          x: { ticks: { color: "#9aa8b9" }, grid: { color: "rgba(154,168,185,0.12)" } },
+          y: { ticks: { color: "#9aa8b9" }, grid: { color: "rgba(154,168,185,0.12)" } },
+        },
+      };
+      if (polyChart) {
+        polyChart.data = data;
+        polyChart.options = options;
+        polyChart.update();
+        return;
+      }
+      // eslint-disable-next-line no-undef
+      polyChart = new Chart(ctx, { type: "line", data, options });
     }
 
     function run() {
