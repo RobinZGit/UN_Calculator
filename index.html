@@ -208,6 +208,17 @@
       </div>
       <button type="button" id="btn">Умножить</button>
     </fieldset>
+
+    <div class="charts" id="charts">
+      <section>
+        <h2>Графики коэффициентов (по индексам)</h2>
+        <p class="note" style="margin-top:0">
+          По оси X — только целые индексы коэффициентов: 0, 1, 2, … (те, которые реально есть в P, Q и P·Q).
+        </p>
+        <canvas id="polyChart" height="260"></canvas>
+      </section>
+    </div>
+
     <fieldset>
       <legend>Пояснение</legend>
       <p class="note" style="margin-top:0">
@@ -220,16 +231,6 @@
   </div>
 
   <div class="out" id="out"></div>
-
-  <div class="charts" id="charts">
-    <section>
-      <h2>Графики коэффициентов (по индексам)</h2>
-      <p class="note" style="margin-top:0">
-        По оси X — только целые индексы коэффициентов: 0, 1, 2, … (те, которые реально есть в P, Q и P·Q).
-      </p>
-      <canvas id="polyChart" height="260"></canvas>
-    </section>
-  </div>
 
   <script>
     /** @param {string} s */
