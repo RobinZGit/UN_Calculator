@@ -250,6 +250,13 @@
           </details>
         </div>
       </div>
+      <div class="row" style="margin-top: 0.25rem;">
+        <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+          <button type="button" id="saveStateBtn" style="width:auto; min-width: 14rem;">Сохранить форму в файл</button>
+          <button type="button" id="loadStateBtn" style="width:auto; min-width: 14rem; background: linear-gradient(180deg, #2f6a4a, #235237); border-color: #3c8a5f;">Загрузить из файла</button>
+          <input type="file" id="stateFile" accept="application/json,.json" style="display:none;" />
+        </div>
+      </div>
       <button type="button" id="btn">Выполнить операцию: P*Q</button>
       <div class="row" style="margin-top: 0.75rem;">
         <div>
@@ -327,6 +334,48 @@
     function sanitizeOpExpr(s) {
       // Разрешаем только: p/q (любой регистр), +, *, ^, скобки и пробелы
       return String(s).replace(/[^pqPQ+*^()\s]/g, "");
+    }
+
+    function getFormState() {
+      const maxLongEl = /** @type {HTMLInputElement|null} */ (document.getElementById("maxLong"));
+      const maxLong = maxLongEl ? parseInt(maxLongEl.value, 10) || maxLongState : maxLongState;
+      return {
+        version: 1,
+        descOrder: /** @type {HTMLInputElement} */ (document.getElementById("descOrder")).checked,
+        nDec: /** @type {HTMLInputElement} */ (document.getElementById("nDec")).value,
+        p1: /** @type {HTMLTextAreaElement} */ (document.getElementById("p1")).value,
+        p2: /** @type {HTMLTextAreaElement} */ (document.getElementById("p2")).value,
+        compH: /** @type {HTMLInputElement} */ (document.getElementById("compH")).value,
+        opExpr: /** @type {HTMLInputElement} */ (document.getElementById("opExpr")).value,
+        maxLong,
+      };
+    }
+
+    function applyFormState(state) {
+      if (!state || typeof state !== "object") throw new Error("Некорректный файл состояния");
+      if (state.version !== 1) throw new Error("Неподдерживаемая версия файла состояния");
+      /** @type {HTMLInputElement} */ (document.getElementById("descOrder")).checked = !!state.descOrder;
+      /** @type {HTMLInputElement} */ (document.getElementById("nDec")).value = String(state.nDec ?? "2");
+      /** @type {HTMLTextAreaElement} */ (document.getElementById("p1")).value = sanitizePolyInput(String(state.p1 ?? ""));
+      /** @type {HTMLTextAreaElement} */ (document.getElementById("p2")).value = sanitizePolyInput(String(state.p2 ?? ""));
+      /** @type {HTMLInputElement} */ (document.getElementById("compH")).value = sanitizePolyInput(String(state.compH ?? ""));
+      /** @type {HTMLInputElement} */ (document.getElementById("opExpr")).value = sanitizeOpExpr(String(state.opExpr ?? "P*Q"));
+      maxLongState = Math.max(30, Math.min(5000, parseInt(String(state.maxLong ?? "180"), 10) || 180));
+      updateOrderModeText();
+      updateOperationUi();
+      resetOutputs();
+    }
+
+    function downloadJson(filename, obj) {
+      const blob = new Blob([JSON.stringify(obj, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
     }
 
     /**
@@ -1138,6 +1187,31 @@
       updateOperationUi();
       resetOutputs();
     });
+
+    document.getElementById("saveStateBtn").addEventListener("click", () => {
+      const state = getFormState();
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+      downloadJson(`polynomial-form-${stamp}.json`, state);
+    });
+    document.getElementById("loadStateBtn").addEventListener("click", () => {
+      /** @type {HTMLInputElement} */ (document.getElementById("stateFile")).click();
+    });
+    document.getElementById("stateFile").addEventListener("change", async (ev) => {
+      const input = /** @type {HTMLInputElement} */ (ev.target);
+      const f = input.files && input.files[0];
+      if (!f) return;
+      try {
+        const text = await f.text();
+        const state = JSON.parse(text);
+        applyFormState(state);
+        run();
+      } catch (e) {
+        alert(String(e));
+      } finally {
+        input.value = "";
+      }
+    });
+
     updateOrderModeText();
     updateOperationUi();
 
