@@ -37,13 +37,29 @@
       white-space: nowrap;
     }
     p.lead { color: var(--muted); margin: 0 0 1.25rem; font-size: 0.95rem; max-width: none; }
-    .grid {
-      display: grid;
+    /** Вертикальный стек панелей на всю ширину (без сжатия формы в половину экрана). */
+    .main-stack {
+      display: flex;
+      flex-direction: column;
       gap: 1rem;
+      width: 100%;
       max-width: none;
+      align-items: stretch;
     }
+    .main-stack > fieldset,
+    .main-stack > .out-results {
+      width: 100%;
+      min-width: 0;
+    }
+    /** На широком экране пары полей в одном ряду формы не переносятся на вторую строку. */
     @media (min-width: 720px) {
-      .grid { grid-template-columns: 1fr 1fr; }
+      .main-stack fieldset .row {
+        flex-wrap: nowrap;
+      }
+      .main-stack fieldset .row > div {
+        min-width: 0;
+        flex: 1 1 0;
+      }
     }
     fieldset {
       border: 1px solid var(--border);
@@ -85,7 +101,7 @@
     button:hover { filter: brightness(1.08); }
     button:active { transform: translateY(1px); }
     .out-results {
-      margin-top: 1rem;
+      margin-top: 0;
       max-width: none;
     }
     .out-results > .out {
@@ -279,7 +295,7 @@
 <body>
   <header class="page-header">
     <div class="page-header-main">
-      <h1>Умножение многочленов и то же самое через «длинное» целое <span class="form-version">v6</span></h1>
+      <h1>Умножение многочленов и то же самое через «длинное» целое <span class="form-version">v7</span></h1>
       <p class="lead">
         Коэффициенты задаются от младшей степени к старшей: <span class="mono">a₀; a₁; a₂ …</span> (между ними — только <span class="mono">;</span>, в числе — только цифры и точка) для
         <span class="mono">a₀ + a₁x + a₂x² + …</span>.
@@ -297,9 +313,9 @@
     </div>
   </header>
 
-  <div class="grid">
+  <div class="main-stack">
     <fieldset>
-      <legend>Входные данные <span class="form-version">v6</span></legend>
+      <legend>Входные данные <span class="form-version">v7</span></legend>
       <div class="row">
         <div style="min-width: 16rem;">
           <label class="switch">
@@ -410,19 +426,19 @@
         Подбирается минимальное <span class="mono">L</span>, при котором <span class="mono">B = 10<sup>L</sup></span> строго больше модуля каждого коэффициента <span class="mono">P</span>, <span class="mono">Q</span> и произведения <span class="mono">P·Q</span>, чтобы при записи <span class="mono">Σ c<sub>i</sub> B<sup>i</sup></span> не было переносов между блоками и можно было однозначно прочитать коэффициенты результата по разрядам <span class="mono">B</span>.
       </p>
     </fieldset>
-  </div>
 
-  <div class="out-results" id="outResults">
-    <div class="charts" id="charts" hidden>
-      <section>
-        <h2>Графики коэффициентов (по индексам)</h2>
-        <p class="note" style="margin-top:0">
-          По оси X — только целые индексы коэффициентов: 0, 1, 2, … (те, которые реально есть в P, Q и результате операции).
-        </p>
-        <canvas id="polyChart" height="260"></canvas>
-      </section>
+    <div class="out-results" id="outResults">
+      <div class="charts" id="charts" hidden>
+        <section>
+          <h2>Графики коэффициентов (по индексам)</h2>
+          <p class="note" style="margin-top:0">
+            По оси X — только целые индексы коэффициентов: 0, 1, 2, … (те, которые реально есть в P, Q и результате операции).
+          </p>
+          <canvas id="polyChart" height="260"></canvas>
+        </section>
+      </div>
+      <div class="out" id="out"></div>
     </div>
-    <div class="out" id="out"></div>
   </div>
 
   <script>
