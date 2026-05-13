@@ -1,7 +1,20 @@
-Чтобы номер версии в заголовке (h1) и в легенде формы увеличивался при каждом коммите, один раз в клоне репозитория выполните:
+Версия в index.html (span.form-version в h1 и в легенде)
 
-  git config core.hooksPath .githooks
+1) Локально (перед каждым коммитом)
+   Выполните один раз в корне клона:
 
-Хук pre-commit запускается перед любым коммитом: скрипт scripts/bump-form-version.ps1 увеличивает число во всех <span class="form-version">vN</span> в index.html и снова выполняет git add index.html, так что новый номер попадает в тот же коммит (даже если вы меняли только другие файлы).
+     Windows (PowerShell):  .\scripts\install-git-hooks.ps1
+     Linux/macOS:           sh scripts/install-git-hooks.sh
 
-Без этой настройки версия в HTML не будет обновляться автоматически.
+   либо вручную:
+
+     git config core.hooksPath .githooks
+
+   Хук pre-commit вызывает scripts/bump_form_version.py hook (или bump-form-version.ps1, если нет python3)
+   и снова делает git add index.html.
+
+2) На GitHub (если хук не настроен)
+   Создайте в репозитории файл .github/workflows/bump-page-version.yml (содержимое скопируйте из
+   contrib/bump-page-version.github-action.yml в корне проекта). После push в master workflow
+   сравнивает vN с HEAD~1; если версия не выросла — делает +1 и пушит коммит с пометкой [page-version]
+   в сообщении (такой коммит не обрабатывается повторно).
