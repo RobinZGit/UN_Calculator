@@ -27,11 +27,11 @@
       padding: 1.25rem clamp(1rem, 3vw, 2rem);
     }
     h1 { font-size: 1.35rem; font-weight: 600; margin: 0 0 0.5rem; }
-    p.lead { color: var(--muted); margin: 0 0 1.25rem; font-size: 0.95rem; max-width: 58rem; }
+    p.lead { color: var(--muted); margin: 0 0 1.25rem; font-size: 0.95rem; max-width: none; }
     .grid {
       display: grid;
       gap: 1rem;
-      max-width: 58rem;
+      max-width: none;
     }
     @media (min-width: 720px) {
       .grid { grid-template-columns: 1fr 1fr; }
@@ -70,7 +70,7 @@
     button:active { transform: translateY(1px); }
     .out {
       margin-top: 1rem;
-      max-width: 58rem;
+      max-width: none;
     }
     .out section {
       border: 1px solid var(--border);
