@@ -208,6 +208,12 @@
         </div>
       </div>
       <button type="button" id="btn">Умножить</button>
+      <div class="row" style="margin-top: 0.75rem;">
+        <div>
+          <label for="p3">Коэффициенты результата P·Q (в том же формате)</label>
+          <textarea id="p3" readonly placeholder="Нажмите «Умножить», чтобы увидеть коэффициенты результата"></textarea>
+        </div>
+      </div>
     </fieldset>
 
     <div class="charts" id="charts">
@@ -285,6 +291,30 @@
       let v = BigInt(digits);
       if (neg) v = -v;
       return v;
+    }
+
+    /** bi масштабирован на 10^(2n). Вернуть строку с n знаками и округлением half-away-from-zero. */
+    function scaled2nBigintToFixedN(bi, n) {
+      if (n === 0) {
+        // округление до целого: bi / 10^(2n) = bi, но n=0 => 10^(0)
+        return bi.toString(10);
+      }
+      const scaleN = 10n ** BigInt(n); // 10^n
+      // хотим округлить (bi / 10^(2n)) до n знаков => округлить (bi / 10^n) до целого, затем поставить точку
+      const neg = bi < 0n;
+      const abs = neg ? -bi : bi;
+      let t = abs / scaleN;
+      const rem = abs % scaleN;
+      if (rem * 2n >= scaleN) t += 1n;
+      let s = t.toString(10);
+      if (s.length <= n) s = s.padStart(n + 1, "0");
+      const intPart = s.slice(0, s.length - n);
+      const fracPart = s.slice(s.length - n);
+      return (neg ? "-" : "") + intPart + "." + fracPart;
+    }
+
+    function coeffsToTextareaString(coeffsBig, n) {
+      return coeffsBig.map((bi) => scaled2nBigintToFixedN(bi, n)).join("; ");
     }
 
     /** @param {bigint[]} p @param {bigint[]} q */
@@ -542,6 +572,8 @@
     function resetOutputs() {
       const out = document.getElementById("out");
       if (out) out.innerHTML = "";
+      const p3 = /** @type {HTMLTextAreaElement|null} */ (document.getElementById("p3"));
+      if (p3) p3.value = "";
       if (polyChart) {
         polyChart.destroy();
         polyChart = null;
@@ -657,6 +689,8 @@
       }
 
       const prod = polyMulBig(c, d);
+      const p3 = /** @type {HTMLTextAreaElement|null} */ (document.getElementById("p3"));
+      if (p3) p3.value = coeffsToTextareaString(prod, n);
       const L = minDigitLengthPow10(c, d, prod);
       const B = 10n ** L;
 
