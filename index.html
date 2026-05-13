@@ -212,11 +212,11 @@
       <div class="row">
         <div>
           <label for="p1">Коэффициенты P(x) (разделитель ; или ,)</label>
-          <textarea id="p1" placeholder="1.5; -2; 0.25">1; 2; 1</textarea>
+          <textarea id="p1" inputmode="decimal" placeholder="1.5; -2; 0.25">1; 2; 1</textarea>
         </div>
         <div>
           <label for="p2">Коэффициенты Q(x)</label>
-          <textarea id="p2" placeholder="1; -1">1; -1</textarea>
+          <textarea id="p2" inputmode="decimal" placeholder="1; -1">1; -1</textarea>
         </div>
       </div>
       <div class="row">
@@ -226,7 +226,7 @@
         </div>
         <div>
           <label for="compH">x = … (композиция p(x) и q(x))</label>
-          <input id="compH" placeholder="например: 0; 1 (это x) или 1; 1 (это 1+x)" />
+          <input id="compH" inputmode="decimal" placeholder="например: 0; 1 (это x) или 1; 1 (это 1+x)" />
         </div>
       </div>
       <div class="row" style="margin-bottom: 0.25rem;">
@@ -814,6 +814,22 @@
       }
     }
 
+    function sanitizePolyInput(s) {
+      // Разрешаем: цифры, пробелы/переносы, '+', '-', ';', ',' и '.'
+      // (запятая/точка могут быть десятичным разделителем или разделителем коэффициентов)
+      return String(s).replace(/[^\d\s;,.+-]/g, "");
+    }
+
+    function bindPolyInputSanitizer(id) {
+      const el = /** @type {HTMLInputElement|HTMLTextAreaElement|null} */ (document.getElementById(id));
+      if (!el) return;
+      el.addEventListener("input", () => {
+        const v = el.value;
+        const next = sanitizePolyInput(v);
+        if (next !== v) el.value = next;
+      });
+    }
+
     /** Drag&Drop: перетаскиваем содержимое одного поля в другое (полная замена) */
     function enableCoeffTextareaDnd(id) {
       const el = /** @type {HTMLTextAreaElement|null} */ (document.getElementById(id));
@@ -1115,6 +1131,10 @@
     });
     updateOrderModeText();
     updateOperationUi();
+
+    bindPolyInputSanitizer("p1");
+    bindPolyInputSanitizer("p2");
+    bindPolyInputSanitizer("compH");
 
     enableCoeffTextareaDnd("p1");
     enableCoeffTextareaDnd("p2");
