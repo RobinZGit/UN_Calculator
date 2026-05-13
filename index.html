@@ -101,6 +101,44 @@
     table.longmul td { padding: 0.08rem 0.12rem; text-align: center; min-width: 0.85rem; }
     table.longmul .sumline td { border-top: 2px solid var(--text); padding-top: 0.25rem; }
 
+    .switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      cursor: pointer;
+      user-select: none;
+    }
+    .switch input { display: none; }
+    .switch .track {
+      width: 48px;
+      height: 26px;
+      border-radius: 999px;
+      background: #0d1117;
+      border: 1px solid var(--border);
+      position: relative;
+      transition: background 120ms ease, border-color 120ms ease;
+      flex: 0 0 auto;
+    }
+    .switch .thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      background: var(--muted);
+      position: absolute;
+      top: 50%;
+      left: 3px;
+      transform: translateY(-50%);
+      transition: left 120ms ease, background 120ms ease;
+    }
+    .switch input:checked + .track {
+      background: rgba(91, 159, 212, 0.25);
+      border-color: rgba(91, 159, 212, 0.7);
+    }
+    .switch input:checked + .track .thumb {
+      left: 25px;
+      background: var(--accent);
+    }
+
     .charts {
       margin-top: 1rem;
       max-width: 58rem;
@@ -138,9 +176,10 @@
       <legend>Входные данные</legend>
       <div class="row">
         <div style="min-width: 16rem;">
-          <label style="display:flex; gap:0.5rem; align-items:center; cursor:pointer;">
-            <input type="checkbox" id="descOrder" style="width:auto; margin:0;" />
-            Ввод коэффициентов: от старшей степени к младшей
+          <label class="switch">
+            <input type="checkbox" id="descOrder" />
+            <span class="track"><span class="thumb"></span></span>
+            <span id="orderModeText">коэффициенты: от младшей степени к старшей</span>
           </label>
           <p class="note" style="margin:0.35rem 0 0;">
             Если включено, то запись <span class="mono">aₙ; …; a₁; a₀</span> будет автоматически преобразована в <span class="mono">a₀; a₁; …; aₙ</span>.
@@ -207,6 +246,15 @@
     function maybeReverseInputOrder(a) {
       const desc = /** @type {HTMLInputElement} */ (document.getElementById("descOrder")).checked;
       return desc ? a.slice().reverse() : a;
+    }
+
+    function updateOrderModeText() {
+      const desc = /** @type {HTMLInputElement} */ (document.getElementById("descOrder")).checked;
+      const el = document.getElementById("orderModeText");
+      if (!el) return;
+      el.textContent = desc
+        ? "коэффициенты: от старшей степени к младшей"
+        : "коэффициенты: от младшей степени к старшей";
     }
 
     /**
@@ -679,7 +727,11 @@
     }
 
     document.getElementById("btn").addEventListener("click", run);
-    document.getElementById("descOrder").addEventListener("change", () => run());
+    document.getElementById("descOrder").addEventListener("change", () => {
+      updateOrderModeText();
+      run();
+    });
+    updateOrderModeText();
   </script>
 </body>
 </html>
