@@ -44,6 +44,13 @@
       margin: 0;
     }
     legend { padding: 0 0.5rem; color: var(--accent); font-weight: 600; font-size: 0.9rem; }
+    legend .form-version {
+      font-weight: 600;
+      color: var(--muted);
+      font-size: 0.82em;
+      margin-left: 0.4rem;
+      font-variant-numeric: tabular-nums;
+    }
     label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 0.35rem; }
     input, textarea, button {
       width: 100%;
@@ -188,7 +195,7 @@
 <body>
   <h1>Умножение многочленов и то же самое через «длинное» целое</h1>
   <p class="lead">
-    Коэффициенты задаются от младшей степени к старшей: <span class="mono">a₀; a₁; a₂ …</span> для
+    Коэффициенты задаются от младшей степени к старшей: <span class="mono">a₀; a₁; a₂ …</span> (между ними — только <span class="mono">;</span>, в числе — только цифры и точка) для
     <span class="mono">a₀ + a₁x + a₂x² + …</span>.
     Вещественные коэффициенты округляются до <span class="mono">n</span> знаков после запятой, затем умножаются на <span class="mono">10ⁿ</span> и превращаются в целые.
     Число <span class="mono">P(B) = c₀ + c₁B + c₂B² + …</span> при достаточно большом <span class="mono">B</span> (степень десяти) умножается как целое; коэффициенты произведения многочленов совпадают с «разрядами» разложения <span class="mono">P(B)·Q(B)</span> по степеням <span class="mono">B</span> — без переносов между разрядами.
@@ -196,7 +203,7 @@
 
   <div class="grid">
     <fieldset>
-      <legend>Входные данные</legend>
+      <legend>Входные данные <span class="form-version">v1</span></legend>
       <div class="row">
         <div style="min-width: 16rem;">
           <label class="switch">
@@ -206,17 +213,18 @@
           </label>
           <p class="note" style="margin:0.35rem 0 0;">
             Если включено, то запись <span class="mono">aₙ; …; a₁; a₀</span> будет автоматически преобразована в <span class="mono">a₀; a₁; …; aₙ</span>.
+            В полях коэффициентов и композиции допустимы только цифры, знаки <span class="mono">+</span>/<span class="mono">-</span>, точка (десятичная) и <span class="mono">;</span> между коэффициентами; запятая не используется.
           </p>
         </div>
       </div>
       <div class="row">
         <div>
-          <label for="p1">Коэффициенты P(x) (разделитель ; или ,)</label>
-          <textarea id="p1" inputmode="decimal" placeholder="1.5; -2; 0.25">1; 2; 1</textarea>
+          <label for="p1">Коэффициенты P(x) (только цифры, . ; + - и пробелы)</label>
+          <textarea id="p1" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="1.5; -2; 0.25">1; 2; 1</textarea>
         </div>
         <div>
-          <label for="p2">Коэффициенты Q(x)</label>
-          <textarea id="p2" inputmode="decimal" placeholder="1; -1">1; -1</textarea>
+          <label for="p2">Коэффициенты Q(x) (только цифры, . ; + - и пробелы)</label>
+          <textarea id="p2" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="1; -1">1; -1</textarea>
         </div>
       </div>
       <div class="row">
@@ -225,8 +233,8 @@
           <input type="number" id="nDec" min="0" max="30" value="2" />
         </div>
         <div>
-          <label for="compH">x = … (композиция p(x) и q(x))</label>
-          <input id="compH" inputmode="decimal" placeholder="например: 0; 1 (это x) или 1; 1 (это 1+x)" />
+          <label for="compH">x = … (коэффициенты h: цифры, . ; + -)</label>
+          <input id="compH" type="text" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="например: 0; 1 (это x) или 1; 1 (это 1+x)" />
         </div>
       </div>
       <div class="row" style="margin-bottom: 0.25rem;">
@@ -235,7 +243,7 @@
             <label for="opExpr" style="margin:0;">Операция над многочленами (P и Q)</label>
             <a class="help-link" href="#parserHelp" onclick="const d=document.getElementById('parserHelp'); d.open=!d.open; return false;">Как парсится?</a>
           </div>
-          <input id="opExpr" value="P*Q" />
+          <input id="opExpr" type="text" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="P*Q" />
           <p class="note" style="margin:0.35rem 0 0;">Поддерживается: <span class="mono">+</span> (сумма), <span class="mono">*</span> (умножение), <span class="mono">^</span> (целая степень). Пример: <span class="mono">(P+Q)^3 + P*Q</span>.</p>
           <details id="parserHelp" style="margin-top:0.5rem;">
             <summary style="cursor:pointer; color: var(--accent); font-weight:600;">Описание логики парсинга</summary>
@@ -300,22 +308,103 @@
   <div class="out" id="out"></div>
 
   <script>
-    /** @param {string} s */
+    /**
+     * Логика страницы (кратко):
+     * 1) Коэффициенты P, Q и многочлен h вводятся как список через «;», каждый токен — число с точкой как десятичным разделителем.
+     * 2) Числа округляются до n знаков после точки, затем умножаются на 10^n и хранятся как bigint (фиксированный масштаб).
+     * 3) Операция над P и Q разбирается в RPN и вычисляется в bigint; при необходимости выполняется композиция с h.
+     * 4) Для выражения ровно P*Q дополнительно показывается кодирование P(B), Q(B), проверка произведения и «столбик».
+     */
+
+    /**
+     * Приводит один текстовый коэффициент к строке, понятной для `Number(...)`.
+     * Убирает пробелы; поддерживает необязательный знак +/−; одна точка отделяет дробную часть.
+     * Запятая запрещена (раньше использовалась как разделитель разрядов — убрано).
+     * Особый случай: «.5» означает 0.5 (пустая целая часть перед точкой).
+     * @param {string} raw — фрагмент между «;» в поле коэффициентов
+     * @returns {string} нормализованная десятичная запись (например "-0.25")
+     * @throws {Error} при пустом токене, лишней точке, запятой или нецифровых частях
+     */
+    function normalizeCoefficientToken(raw) {
+      let s = raw
+        .trim()
+        .replace(/[\u00a0\u202f]/g, " ")
+        .replace(/\s+/g, "");
+      if (!s) throw new Error("Пустой коэффициент");
+      if (s.includes(",")) {
+        throw new Error("Запятая в коэффициентах не используется; дробная часть — через точку, между коэффициентами — ;");
+      }
+      let sign = "";
+      if (s[0] === "+" || s[0] === "-") {
+        sign = s[0] === "-" ? "-" : "";
+        s = s.slice(1);
+      }
+      if (!s) throw new Error("Некорректное число");
+      if ((s.match(/\./g) || []).length > 1) {
+        throw new Error("В коэффициенте допустима только одна точка (десятичный разделитель)");
+      }
+      let intPart;
+      let fracPart = "";
+      const dot = s.indexOf(".");
+      if (dot >= 0) {
+        intPart = s.slice(0, dot);
+        fracPart = s.slice(dot + 1);
+      } else {
+        intPart = s;
+      }
+      if (fracPart && !/^\d+$/.test(fracPart)) {
+        throw new Error("Дробная часть должна содержать только цифры");
+      }
+      let ipDigits;
+      if (!intPart) {
+        if (!fracPart) throw new Error("Некорректное число");
+        ipDigits = "";
+      } else {
+        if (!/^\d+$/.test(intPart)) {
+          throw new Error("Целая часть коэффициента должна содержать только цифры (или пусто перед .дробью)");
+        }
+        ipDigits = intPart;
+      }
+      if (ipDigits === "" && fracPart !== "") return sign + "0." + fracPart;
+      if (ipDigits === "") throw new Error("Некорректное число");
+      return sign + ipDigits + (fracPart ? "." + fracPart : "");
+    }
+
+    /**
+     * Разбирает строку поля многочлена на массив вещественных коэффициентов.
+     * Разделитель коэффициентов — только точка с запятой; внутри токена действует {@link normalizeCoefficientToken}.
+     * @param {string} s — сырое содержимое textarea/input (например "1; -2.5; 0")
+     * @returns {number[]} массив коэффициентов в порядке ввода (до {@link maybeReverseInputOrder})
+     * @throws {Error} если токен не удалось нормализовать или `Number` дал не конечное значение
+     */
     function parseCoeffs(s) {
       return s
-        .replace(/,/g, ";")
         .split(";")
         .map((t) => t.trim())
         .filter(Boolean)
-        .map((t) => Number(t));
+        .map((t) => {
+          const norm = normalizeCoefficientToken(t);
+          const n = Number(norm);
+          if (!Number.isFinite(n)) throw new Error(`Не удалось распознать число: ${t}`);
+          return n;
+        });
     }
 
-    /** @param {number[]} a */
+    /**
+     * Если включён режим «от старшей степени к младшей», переворачивает массив коэффициентов,
+     * чтобы внутренняя логика всегда работала от младшего к старшему (индекс i = степень x^i).
+     * @param {number[]} a — коэффициенты в порядке, как ввёл пользователь
+     * @returns {number[]} либо копия `a`, либо `a` в обратном порядке
+     */
     function maybeReverseInputOrder(a) {
       const desc = /** @type {HTMLInputElement} */ (document.getElementById("descOrder")).checked;
       return desc ? a.slice().reverse() : a;
     }
 
+    /**
+     * Синхронизирует подпись переключателя порядка коэффициентов с флажком #descOrder.
+     * Не меняет данные, только текст для пользователя.
+     */
     function updateOrderModeText() {
       const desc = /** @type {HTMLInputElement} */ (document.getElementById("descOrder")).checked;
       const el = document.getElementById("orderModeText");
@@ -325,17 +414,31 @@
         : "коэффициенты: от младшей степени к старшей";
     }
 
+    /**
+     * Обновляет текст кнопки запуска так, чтобы в нём отображалось текущее выражение операции (например P*Q).
+     */
     function updateOperationUi() {
       const expr = String((/** @type {HTMLInputElement} */ (document.getElementById("opExpr"))).value || "").trim();
       const btn = /** @type {HTMLButtonElement} */ (document.getElementById("btn"));
       btn.textContent = `Выполнить операцию: ${expr || "—"}`;
     }
 
+    /**
+     * Оставляет в строке операции только допустимые символы парсера выражений.
+     * Разрешены идентификаторы P/Q (любой регистр), операторы + * ^, скобки и пробелы; всё остальное удаляется.
+     * Вызывается при вводе в #opExpr и при загрузке состояния из JSON.
+     * @param {string} s
+     * @returns {string}
+     */
     function sanitizeOpExpr(s) {
-      // Разрешаем только: p/q (любой регистр), +, *, ^, скобки и пробелы
       return String(s).replace(/[^pqPQ+*^()\s]/g, "");
     }
 
+    /**
+     * Снимает «снимок» всех полей формы в простой объект для сохранения в JSON.
+     * Версия схемы `version: 1` позволит в будущем менять формат файла состояния.
+     * @returns {{ version: number, descOrder: boolean, nDec: string, p1: string, p2: string, compH: string, opExpr: string, maxLong: number }}
+     */
     function getFormState() {
       const maxLongEl = /** @type {HTMLInputElement|null} */ (document.getElementById("maxLong"));
       const maxLong = maxLongEl ? parseInt(maxLongEl.value, 10) || maxLongState : maxLongState;
@@ -351,6 +454,12 @@
       };
     }
 
+    /**
+     * Заполняет элементы формы из объекта, ранее полученного через {@link getFormState}.
+     * Проверяет `state.version === 1`, санитизирует текстовые поля, обновляет maxLongState и сбрасывает вывод.
+     * @param {unknown} state — распарсенный JSON
+     * @throws {Error} если структура неверна или версия файла не поддерживается
+     */
     function applyFormState(state) {
       if (!state || typeof state !== "object") throw new Error("Некорректный файл состояния");
       if (state.version !== 1) throw new Error("Неподдерживаемая версия файла состояния");
@@ -366,6 +475,11 @@
       resetOutputs();
     }
 
+    /**
+     * Скачивает объект как JSON-файл в папку загрузок браузера (через временный Blob URL).
+     * @param {string} filename — имя файла, например polynomial-form-2025-01-01.json
+     * @param {unknown} obj — любой сериализуемый в JSON объект
+     */
     function downloadJson(filename, obj) {
       const blob = new Blob([JSON.stringify(obj, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
@@ -379,9 +493,11 @@
     }
 
     /**
-     * Округление к n знакам после запятой (половина вверх от нуля).
+     * Округляет вещественное число до `n` знаков после десятичной точки (half away from zero).
+     * Используется для отображения и промежуточных float-преобразований; для точных bigint-операций см. {@link toScaledBigInt}.
      * @param {number} x
-     * @param {number} n
+     * @param {number} n — неотрицательное число знаков после точки
+     * @returns {number}
      */
     function roundFixed(x, n) {
       if (!Number.isFinite(x)) return x;
@@ -391,9 +507,12 @@
     }
 
     /**
-     * Целое c = round(a * 10^n) через строку, чтобы не терять точность для больших n.
-     * @param {number} a
-     * @param {number} n
+     * Переводит вещественный коэффициент `a` в целое «в масштабе 10^n»: по сути round(a·10^n) как bigint.
+     * Использует `toFixed(n)` и разбор строки, чтобы избежать ошибок двоичной плавающей точки для больших n.
+     * @param {number} a — уже конечное вещественное число (после округления по желанию)
+     * @param {number} n — число знаков после точки (масштаб 10^n)
+     * @returns {bigint}
+     * @throws {Error} если `a` не конечно
      */
     function toScaledBigInt(a, n) {
       if (!Number.isFinite(a)) throw new Error("Неконечный коэффициент");
@@ -406,11 +525,24 @@
       return v;
     }
 
+    /**
+     * Возвращает 10^d как bigint (утилита для масштабирования и деления с округлением).
+     * @param {number} d — неотрицательное целое (степень десятки)
+     * @returns {bigint}
+     */
     function pow10(d) {
       return 10n ** BigInt(d);
     }
 
-    /** bi масштабирован на 10^scalePow. Вернуть строку с n знаками и округлением half-away-from-zero. */
+    /**
+     * Преобразует bigint-коэффициент, заданный в масштабе 10^scalePow, в строку с ровно n знаками после точки.
+     * Округление дробной части — half away from zero при необходимости уменьшения масштаба (scalePow > n).
+     * При scalePow < n дописываются нули справа (увеличение точности без потерь).
+     * @param {bigint} bi — значение коэффициента в «единицах» 10^scalePow
+     * @param {number} scalePow — степень десятки знаменателя внутреннего представления
+     * @param {number} n — желаемое число знаков после точки в строке результата
+     * @returns {string} десятичная запись, например "-12.3400"
+     */
     function scaledBigintToFixedN(bi, scalePow, n) {
       const neg = bi < 0n;
       const abs = neg ? -bi : bi;
@@ -448,16 +580,39 @@
       return (neg ? "-" : "") + intPart + "." + fracPart;
     }
 
+    /**
+     * Склеивает коэффициенты многочлена в одну строку для textarea: значения через "; " с фиксированным n знаков.
+     * Порядок индексов — внутренний (младшая степень первой), без учёта переключателя descOrder.
+     * @param {bigint[]} coeffsBig
+     * @param {number} scalePow
+     * @param {number} n
+     * @returns {string}
+     */
     function coeffsToTextareaString(coeffsBig, scalePow, n) {
       return coeffsBig.map((bi) => scaledBigintToFixedN(bi, scalePow, n)).join("; ");
     }
 
+    /**
+     * Как {@link coeffsToTextareaString}, но если пользователь включил порядок «от старшей степени»,
+     * сначала разворачивает массив коэффициентов, чтобы вывод совпадал с порядком ввода.
+     * @param {bigint[]} coeffsBig
+     * @param {number} scalePow
+     * @param {number} n
+     * @returns {string}
+     */
     function coeffsToTextareaStringDisplay(coeffsBig, scalePow, n) {
       const desc = /** @type {HTMLInputElement} */ (document.getElementById("descOrder")).checked;
       const a = desc ? coeffsBig.slice().reverse() : coeffsBig;
       return coeffsToTextareaString(a, scalePow, n);
     }
 
+    /**
+     * Целочисленное деление num/den с округлением половины вверх по модулю (half up для |num|/den).
+     * Используется после перемножения двух масштабированных bigint-коэффициентов, чтобы вернуть масштаб 10^n.
+     * @param {bigint} num
+     * @param {bigint} den — строго положительный
+     * @returns {bigint}
+     */
     function divRoundHalfUpSigned(num, den) {
       if (den <= 0n) throw new Error("den must be > 0");
       const neg = num < 0n;
@@ -468,7 +623,15 @@
       return neg ? -q : q;
     }
 
-    /** Умножение многочленов с фиксированным масштабом 10^n: (a*b)/10^n с округлением */
+    /**
+     * Умножение двух многочленов, чьи коэффициенты уже в масштабе 10^n (bigint).
+     * После свёртки по формуле Cauchy каждый коэффициент делится на 10^n с округлением,
+     * потому что произведение двух чисел в масштабе 10^n лежит в масштабе 10^(2n).
+     * @param {bigint[]} a — коэффициенты первого многочлена
+     * @param {bigint[]} b — второго
+     * @param {number} n — общий масштаб входных коэффициентов
+     * @returns {bigint[]} коэффициенты произведения в том же масштабе 10^n (обрезаны старшие нули)
+     */
     function polyMulFixedScale(a, b, n) {
       const den = pow10(n);
       const len = a.length + b.length - 1;
@@ -482,7 +645,14 @@
       return trimPoly(r);
     }
 
-    /** Композиция P(h(x)) при фиксированном масштабе 10^n (коэффициенты P и h уже в масштабе 10^n). */
+    /**
+     * Композиция многочленов P(h(x)): коэффициенты P и h в масштабе 10^n, результат — тоже в 10^n.
+     * Реализована схемой Горнера: res = …((p_m·h + p_{m-1})·h + … ) с умножением {@link polyMulFixedScale} и сложением {@link polyAddBig}.
+     * @param {bigint[]} pCoeffs — коэффициенты P (индекс i соответствует x^i после возможного reverse ввода)
+     * @param {bigint[]} hCoeffs — коэффициенты h
+     * @param {number} n — масштаб
+     * @returns {bigint[]}
+     */
     function polyComposeFixedScale(pCoeffs, hCoeffs, n) {
       let res = [0n];
       for (let i = pCoeffs.length - 1; i >= 0; i--) {
@@ -492,7 +662,13 @@
       return trimPoly(res);
     }
 
-    /** @param {bigint[]} a @param {bigint[]} b */
+    /**
+     * Покомпонентное сложение двух многочленов в представлении bigint (одинаковый «физический» масштаб у слагаемых).
+     * Несовпадение масштабов на уровне объектов обрабатывается в {@link polyAddObj} через {@link scalePoly}.
+     * @param {bigint[]} a
+     * @param {bigint[]} b
+     * @returns {bigint[]}
+     */
     function polyAddBig(a, b) {
       const len = Math.max(a.length, b.length);
       const r = Array.from({ length: len }, () => 0n);
@@ -500,7 +676,13 @@
       return trimPoly(r);
     }
 
-    /** @param {{coeffs: bigint[], scalePow: number}} a @param {{coeffs: bigint[], scalePow: number}} b */
+    /**
+     * Сложение двух многочленов, заданных парами {coeffs, scalePow}, с приведением к общему масштабу.
+     * Многочлен с меньшим scalePow домножается на 10^(разница), чтобы покомпонентно сложить bigint.
+     * @param {{coeffs: bigint[], scalePow: number}} a
+     * @param {{coeffs: bigint[], scalePow: number}} b
+     * @returns {{coeffs: bigint[], scalePow: number}}
+     */
     function polyAddObj(a, b) {
       const sp = Math.max(a.scalePow, b.scalePow);
       const aa = a.scalePow === sp ? a.coeffs : scalePoly(a.coeffs, sp - a.scalePow);
@@ -508,24 +690,47 @@
       return { coeffs: polyAddBig(aa, bb), scalePow: sp };
     }
 
-    /** @param {{coeffs: bigint[], scalePow: number}} a @param {{coeffs: bigint[], scalePow: number}} b */
+    /**
+     * Умножение двух многочленов в «объектном» виде: масштабы складываются (как при умножении дробей с знаменателями 10^sa и 10^sb).
+     * Сами коэффициенты умножаются точно через {@link polyMulBig} без промежуточного округления по n.
+     * @param {{coeffs: bigint[], scalePow: number}} a
+     * @param {{coeffs: bigint[], scalePow: number}} b
+     * @returns {{coeffs: bigint[], scalePow: number}}
+     */
     function polyMulObj(a, b) {
       return { coeffs: polyMulBig(a.coeffs, b.coeffs), scalePow: a.scalePow + b.scalePow };
     }
 
+    /**
+     * Удаляет старшие нулевые коэффициенты, оставляя многочлен в каноническом виде (последний ≠ 0 или [0]).
+     * @param {bigint[]} a
+     * @returns {bigint[]}
+     */
     function trimPoly(a) {
       let k = a.length - 1;
       while (k > 0 && a[k] === 0n) k--;
       return a.slice(0, k + 1);
     }
 
+    /**
+     * Домножает все коэффициенты на 10^powDiff, повышая scalePow многочлена на powDiff без изменения значения многочлена «как дроби».
+     * @param {bigint[]} a
+     * @param {number} powDiff — неотрицательное целое
+     * @returns {bigint[]}
+     */
     function scalePoly(a, powDiff) {
       if (powDiff <= 0) return a.slice();
       const m = pow10(powDiff);
       return a.map((x) => x * m);
     }
 
-    /** @param {bigint[]} p @param {number} k */
+    /**
+     * Возводит многочлен p в целую неотрицательную степень k бинарным возведением в степень в кольце многочленов.
+     * Коэффициенты — bigint, умножение — точное {@link polyMulBig}; используется в RPN для токена ^.
+     * @param {bigint[]} p
+     * @param {number} k
+     * @returns {bigint[]}
+     */
     function polyPowBig(p, k) {
       if (!Number.isInteger(k) || k < 0) throw new Error("Степень должна быть целым числом ≥ 0");
       let base = trimPoly(p);
@@ -540,8 +745,13 @@
       return res;
     }
 
-    // polyComposeObj оставляем для общего случая, но для пользовательской композиции используем fixed-scale реализацию выше.
-
+    /**
+     * Разбирает строку операции (например "(P+Q)^2*Q") в плоский список токенов.
+     * Токены: "P", "Q", целые литералы, операторы + * ^, скобки. Пробелы пропускаются.
+     * @param {string} s — уже верхний регистр не обязателен; внутри P/p нормализуются в P
+     * @returns {string[]}
+     * @throws {Error} на неизвестном символе
+     */
     function tokenizeExpr(s) {
       const t = [];
       let i = 0;
@@ -562,6 +772,13 @@
       return t;
     }
 
+    /**
+     * Преобразует инфиксный список токенов в обратную польскую запись (RPN) по алгоритму сортировочной станции.
+     * Приоритеты: ^ выше *, выше +; ^ правоассоциативен (цепочки a^b^c как a^(b^c)).
+     * @param {string[]} tokens — результат {@link tokenizeExpr}
+     * @returns {string[]}
+     * @throws {Error} при несогласованных скобках или неожиданном токене
+     */
     function parseToRpn(tokens) {
       const out = [];
       const ops = [];
@@ -594,13 +811,23 @@
       return out;
     }
 
-    /** @param {string} expr */
+    /**
+     * Проверяет, является ли выражение (с игнорированием пробелов и регистра) ровно умножением P на Q или Q на P.
+     * От этого зависит, показывать ли блок «длинная арифметика» и кодирование P(B), Q(B).
+     * @param {string} expr
+     * @returns {boolean}
+     */
     function isPlainMultiplyPQ(expr) {
       const e = expr.replace(/\s+/g, "").toUpperCase();
       return e === "P*Q" || e === "Q*P";
     }
 
-    /** @param {bigint[]} p @param {bigint[]} q */
+    /**
+     * Классическое свёрточное умножение многочленов: (Σ p_i x^i)(Σ q_j x^j), коэффициенты bigint без округления.
+     * @param {bigint[]} p
+     * @param {bigint[]} q
+     * @returns {bigint[]}
+     */
     function polyMulBig(p, q) {
       const len = p.length + q.length - 1;
       /** @type {bigint[]} */
@@ -613,11 +840,23 @@
       return r;
     }
 
+    /**
+     * Модуль bigint (для сравнения величин коэффициентов при выборе L).
+     * @param {bigint} x
+     * @returns {bigint}
+     */
     function absBig(x) {
       return x < 0n ? -x : x;
     }
 
-    /** Минимальное L: B=10^L > max(|c|,|d|,|S|), чтобы |каждый коэфф| < B */
+    /**
+     * Находит минимальное L такое, что B=10^L больше модуля любого коэффициента P, Q и каждого коэффициента произведения P·Q.
+     * Это число десятичных позиций на блок при записи P(B) и Q(B) без переноса между «разрядами».
+     * @param {bigint[]} c — коэффициенты P (масштабированные)
+     * @param {bigint[]} d — Q
+     * @param {bigint[]} prod — коэффициенты P·Q
+     * @returns {bigint} L как bigint (длина строки максимального модуля)
+     */
     function minDigitLengthPow10(c, d, prod) {
       let M = 0n;
       for (const arr of [c, d, prod]) {
@@ -630,7 +869,13 @@
       return BigInt(M.toString(10).length);
     }
 
-    /** @param {bigint[]} coeffs @param {bigint} B */
+    /**
+     * Вычисляет значение многочлена Σ coeffs[k]·B^k при фиксированном целом основании B (разложение по возрастающей степени).
+     * Используется для проверки равенства «свёртки по блокам» и произведения P(B)·Q(B).
+     * @param {bigint[]} coeffs
+     * @param {bigint} B
+     * @returns {bigint}
+     */
     function polyValueAtBase(coeffs, B) {
       let s = 0n;
       let pow = 1n;
@@ -641,7 +886,12 @@
       return s;
     }
 
-    /** @param {bigint[]} coeffs @param {bigint} L */
+    /**
+     * То же значение многочлена при B=10^L, но схемой Горнера от старшей степени (меньше промежуточных умножений на большие B).
+     * @param {bigint[]} coeffs
+     * @param {bigint} L — степень десятки (B = 10^L)
+     * @returns {{ B: bigint, value: bigint }}
+     */
     function polyEvalBasePow10(coeffs, L) {
       const B = 10n ** L;
       let acc = 0n;
@@ -651,7 +901,13 @@
       return { B, value: acc };
     }
 
-    /** Блоки по L десятичных знаков (модуль &lt; B=10^L). Для наглядности блоки разделены пробелом. */
+    /**
+     * Формирует наглядную строку блоков: каждый коэффициент записывается ровно в L десятичных позиций (ведущие нули),
+     * блоки разделяются пробелом. Если |c| ≥ 10^L, выводится коэффициент в скобках как предупреждение о переполнении блока.
+     * @param {bigint[]} coeffs
+     * @param {bigint} L — ширина блока (число десятичных знаков)
+     * @returns {string}
+     */
     function paddedBlocksString(coeffs, L) {
       const width = Number(L);
       return coeffs
@@ -665,21 +921,29 @@
         .join(" ");
     }
 
-    /** Удалить ведущие нули у десятичной строки */
+    /**
+     * Убирает ведущие нули у строки из цифр, оставляя хотя бы одну цифру (чтобы "000" не стало пустой строкой).
+     * @param {string} str
+     * @returns {string}
+     */
     function stripLeadingZerosDecimal(str) {
       let i = 0;
       while (i < str.length - 1 && str[i] === "0") i++;
       return str.slice(i);
     }
 
-    /** Порог: столбик O(n·m); таблица — по одной ячейке на символ строки. */
+    /** Максимум пар «цифра×цифра» в школьном столбике (n×m), выше — не считаем, чтобы не подвесить страницу. */
     const MAX_LONGMUL_OPS = 400_000;
+    /** Верхняя оценка числа ячеек в HTML-таблице столбика; иначе показываем только текстовую сумму. */
     const MAX_TABLE_CELLS = 120_000;
 
     /**
-     * Школьное умножение неотрицательных десятичных строк.
-     * @param {string} a
+     * Школьное умножение двух неотрицательных целых, заданных десятичными строками (без знака и точки).
+     * Сначала строятся сдвинутые частичные произведения (каждая строка — умножение A на одну цифру B с дописанными нулями),
+     * затем они суммируются столбиком. При n·m > MAX_LONGMUL_OPS возвращает skipped без суммы.
+     * @param {string} a — только цифры (прочие символы предварительно вычищаются вызывающим кодом)
      * @param {string} b
+     * @returns {{ lines: string[], sum: string, rows: [], skipped: boolean }} поле rows зарезервировано; при skipped истинно sum может быть пустым
      */
     function longMultiplyDecimalStrings(a, b) {
       const A = stripLeadingZerosDecimal(a.replace(/\D/g, ""));
@@ -721,7 +985,15 @@
       return { lines: partial, sum, rows: [], skipped: false };
     }
 
-    /** HTML-таблица столбика. @returns {{ html: string, sum: string | null }} */
+    /**
+     * Строит HTML-таблицу «умножение столбиком» для двух десятичных записей |P(B)| и |Q(B)|.
+     * Очищает строки до цифр, проверяет лимиты длины и числа операций, вызывает {@link longMultiplyDecimalStrings}.
+     * При слишком большой таблице возвращает только текстовую сумму или сообщение-заглушку.
+     * @param {string} aStr
+     * @param {string} bStr
+     * @param {number} maxCols — максимум суммы длин множителей (n+m), иначе столбик не строится
+     * @returns {{ html: string, sum: string | null }} html — разметка или пояснение; sum — строка результата или null
+     */
     function renderLongMulTable(aStr, bStr, maxCols) {
       const cleanA = stripLeadingZerosDecimal(aStr.replace(/[^\d]/g, ""));
       const cleanB = stripLeadingZerosDecimal(bStr.replace(/[^\d]/g, ""));
@@ -783,6 +1055,13 @@
       return { html, sum };
     }
 
+    /**
+     * Человекочитаемая строка многочлена с bigint-коэффициентами: c₀ + c₁·varName + c₂·varName² + …
+     * Нулевые слагаемые пропускаются; знак минус оформляется как «+ -» с последующей заменой на «- ».
+     * @param {bigint[]} coeffs
+     * @param {string} [varName="x"]
+     * @returns {string}
+     */
     function formatPolyBig(coeffs, varName = "x") {
       const parts = [];
       for (let i = 0; i < coeffs.length; i++) {
@@ -797,7 +1076,14 @@
       return parts.length ? parts.join(" + ").replace(/\+ -/g, "- ") : "0";
     }
 
-    /** @param {bigint} num @param {bigint} den @param {number} fracDigits */
+    /**
+     * Делит bigint num на den, возвращая десятичную строку с фиксированным числом знаков после точки (дробная часть дополняется нулями).
+     * Используется для точного отображения рациональных значений коэффициентов до округления к n знакам в float.
+     * @param {bigint} num
+     * @param {bigint} den — положительный
+     * @param {number} fracDigits
+     * @returns {string}
+     */
     function bigintDivToFixedString(num, den, fracDigits) {
       const neg = num < 0n;
       const v = neg ? -num : num;
@@ -807,7 +1093,14 @@
       return (neg ? "-" : "") + ip.toString(10) + (fracDigits ? "." + fracStr : "");
     }
 
-    /** Многочлен из bigint-коэффициентов результата; знаменатель den = 10^(2n). */
+    /**
+     * Форматирует многочлен, коэффициенты которого заданы в «сыром» bigint-масштабе с общим знаменателем den (обычно 10^(2n)).
+     * Каждый коэффициент сначала переводится в десятичную строку через {@link bigintDivToFixedString}, затем округляется к n знакам как число.
+     * @param {bigint[]} coeffs
+     * @param {bigint} den
+     * @param {number} n — целевое число знаков после точки для коэффициентов
+     * @returns {string}
+     */
     function formatPolyFromScaledBigint(coeffs, den, n) {
       const parts = [];
       for (let i = 0; i < coeffs.length; i++) {
@@ -823,6 +1116,12 @@
       return parts.length ? parts.join(" + ").replace(/\+ -/g, "- ") : "0";
     }
 
+    /**
+     * Форматирует многочлен с вещественными коэффициентами, округляя каждый ненулевой коэффициент до n знаков после точки.
+     * @param {number[]} coeffs
+     * @param {number} n
+     * @returns {string}
+     */
     function formatPolyFloat(coeffs, n) {
       const parts = [];
       for (let i = 0; i < coeffs.length; i++) {
@@ -838,7 +1137,13 @@
       return parts.length ? parts.join(" + ").replace(/\+ -/g, "- ") : "0";
     }
 
-    /** @param {number[]} p @param {number[]} q */
+    /**
+     * Умножение многочленов с коэффициентами number (без bigint): свёртка как в {@link polyMulBig}, но в вещественной арифметике.
+     * Используется только для вспомогательного отображения округлённых многочленов, не для основной точной цепочки.
+     * @param {number[]} p
+     * @param {number[]} q
+     * @returns {number[]}
+     */
     function polyMulFloat(p, q) {
       const len = p.length + q.length - 1;
       const r = Array.from({ length: len }, () => 0);
@@ -850,9 +1155,15 @@
       return r;
     }
 
+    /** Экземпляр графика Chart.js для коэффициентов; уничтожается в {@link resetOutputs}. */
     let polyChart = null;
+    /** Значение поля «макс. длина числа для столбика», если элемент ещё не в DOM (до первого показа блока P*Q). */
     let maxLongState = 180;
 
+    /**
+     * Сбрасывает вычисленный вывод: очищает #out, поля результатов p3/p1c/p2c и уничтожает график.
+     * Вызывается при изменении входных данных, чтобы не показывать устаревший результат.
+     */
     function resetOutputs() {
       const out = document.getElementById("out");
       if (out) out.innerHTML = "";
@@ -868,12 +1179,20 @@
       }
     }
 
+    /**
+     * Удаляет из строки ввода многочлена все символы, кроме разрешённого набора: цифры, пробелы, + - ; .
+     * Запятая запрещена по правилам ввода (десятичный разделитель только точка).
+     * @param {string} s
+     * @returns {string}
+     */
     function sanitizePolyInput(s) {
-      // Разрешаем: цифры, пробелы/переносы, '+', '-', ';', ',' и '.'
-      // (запятая/точка могут быть десятичным разделителем или разделителем коэффициентов)
-      return String(s).replace(/[^\d\s;,.+-]/g, "");
+      return String(s).replace(/[^\d\s;.+-]/g, "");
     }
 
+    /**
+     * На каждый ввод в поле коэффициентов подставляет значение, пропущенное через {@link sanitizePolyInput}.
+     * @param {string} id — id элемента (p1, p2, compH)
+     */
     function bindPolyInputSanitizer(id) {
       const el = /** @type {HTMLInputElement|HTMLTextAreaElement|null} */ (document.getElementById(id));
       if (!el) return;
@@ -884,7 +1203,11 @@
       });
     }
 
-    /** Drag&Drop: перетаскиваем содержимое одного поля в другое (полная замена) */
+    /**
+     * Включает drag-and-drop текста между полями коэффициентов на устройствах с точным указателем (десктоп).
+     * На сенсорных планшетах без hover не подключается, чтобы не ломать выделение и ввод.
+     * @param {string} id — id textarea
+     */
     function enableCoeffTextareaDnd(id) {
       const el = /** @type {HTMLTextAreaElement|null} */ (document.getElementById(id));
       if (!el) return;
@@ -919,6 +1242,13 @@
       });
     }
 
+    /**
+     * Обновляет или создаёт линейный график Chart.js: по оси X индекс коэффициента, по Y значение (float).
+     * Три серии — P, Q и результат операции (уже приведённые к числам для отображения).
+     * @param {number[]} pCoeffs
+     * @param {number[]} qCoeffs
+     * @param {number[]} rCoeffs
+     */
     function updateCharts(pCoeffs, qCoeffs, rCoeffs) {
       const maxLen = Math.max(pCoeffs.length, qCoeffs.length, rCoeffs.length);
       const xs = Array.from({ length: maxLen }, (_, i) => i);
@@ -994,6 +1324,12 @@
       polyChart = new Chart(ctx, { type: "line", data, options });
     }
 
+    /**
+     * Главный расчёт по нажатию кнопки: читает n, выражение операции и поля P, Q, h; парсит коэффициенты;
+     * при непустом h заменяет P,Q на P∘h, Q∘h в масштабе 10^n; вычисляет выражение в RPN на bigint;
+     * заполняет поля результата, HTML-блок #out (пояснения, при P*Q — кодирование B и столбик), обновляет график.
+     * Ошибки парсинга и вычисления выводятся в #out без исключения наружу.
+     */
     function run() {
       const out = document.getElementById("out");
       const maxLongEl = /** @type {HTMLInputElement|null} */ (document.getElementById("maxLong"));
@@ -1008,8 +1344,9 @@
       try {
         raw1 = maybeReverseInputOrder(parseCoeffs(document.getElementById("p1").value));
         raw2 = maybeReverseInputOrder(parseCoeffs(document.getElementById("p2").value));
-      } catch {
-        out.innerHTML = "<section><h2>Ошибка</h2><p>Не удалось разобрать коэффициенты.</p></section>";
+      } catch (e) {
+        const msg = e && typeof e === "object" && "message" in e ? String(/** @type {{ message: string }} */ (e).message) : String(e);
+        out.innerHTML = `<section><h2>Ошибка</h2><p>Не удалось разобрать коэффициенты.</p><pre>${msg}</pre></section>`;
         return;
       }
       if (!raw1.length || !raw2.length) {
