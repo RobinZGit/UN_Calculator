@@ -139,6 +139,20 @@
       background: var(--accent);
     }
 
+    .inline-label {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+    .help-link {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.85rem;
+      white-space: nowrap;
+    }
+    .help-link:hover { text-decoration: underline; }
+
     .charts {
       margin-top: 1rem;
       max-width: none;
@@ -209,9 +223,21 @@
       </div>
       <div class="row" style="margin-bottom: 0.25rem;">
         <div>
-          <label for="opExpr">Операция над многочленами (P и Q)</label>
+          <div class="inline-label">
+            <label for="opExpr" style="margin:0;">Операция над многочленами (P и Q)</label>
+            <a class="help-link" href="#parserHelp" onclick="document.getElementById('parserHelp').open = true;">Как парсится?</a>
+          </div>
           <input id="opExpr" value="P*Q" />
           <p class="note" style="margin:0.35rem 0 0;">Поддерживается: <span class="mono">+</span> (сумма), <span class="mono">*</span> (умножение), <span class="mono">^</span> (целая степень). Пример: <span class="mono">(P+Q)^3 + P*Q</span>.</p>
+          <details id="parserHelp" style="margin-top:0.5rem;">
+            <summary style="cursor:pointer; color: var(--accent); font-weight:600;">Описание логики парсинга</summary>
+            <div class="note" style="margin-top:0.5rem;">
+              <div><span class="mono">P</span> и <span class="mono">Q</span> — это многочлены из двух полей коэффициентов.</div>
+              <div><span class="mono">*</span> — умножение многочленов; <span class="mono">+</span> — сумма; <span class="mono">^</span> — возведение многочлена в целую степень (например <span class="mono">P^4</span>).</div>
+              <div>Приоритеты: <span class="mono">^</span> выше <span class="mono">*</span> выше <span class="mono">+</span>. Скобки <span class="mono">( )</span> поддерживаются.</div>
+              <div>Степень после <span class="mono">^</span> должна быть целым числом <span class="mono">≥ 0</span>.</div>
+            </div>
+          </details>
         </div>
       </div>
       <button type="button" id="btn">Выполнить операцию: P*Q</button>
