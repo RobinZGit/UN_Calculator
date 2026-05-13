@@ -324,6 +324,11 @@
       btn.textContent = `Выполнить операцию: ${expr || "—"}`;
     }
 
+    function sanitizeOpExpr(s) {
+      // Разрешаем только: p/q (любой регистр), +, *, ^, скобки и пробелы
+      return String(s).replace(/[^pqPQ+*^()\s]/g, "");
+    }
+
     /**
      * Округление к n знакам после запятой (половина вверх от нуля).
      * @param {number} x
@@ -1126,6 +1131,10 @@
     document.getElementById("p2").addEventListener("input", resetOutputs);
     document.getElementById("compH").addEventListener("input", resetOutputs);
     document.getElementById("opExpr").addEventListener("input", () => {
+      const el = /** @type {HTMLInputElement} */ (document.getElementById("opExpr"));
+      const v = el.value;
+      const next = sanitizeOpExpr(v);
+      if (next !== v) el.value = next;
       updateOperationUi();
       resetOutputs();
     });
