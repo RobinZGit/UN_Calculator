@@ -420,7 +420,7 @@
         const ch = s[i];
         if (/\s/.test(ch)) { i++; continue; }
         if (ch === "+" || ch === "*" || ch === "^" || ch === "(" || ch === ")") { t.push(ch); i++; continue; }
-        if (ch === "P" || ch === "Q") { t.push(ch); i++; continue; }
+        if (ch === "P" || ch === "Q" || ch === "p" || ch === "q") { t.push(ch.toUpperCase()); i++; continue; }
         if (/\d/.test(ch)) {
           let j = i + 1;
           while (j < s.length && /\d/.test(s[j])) j++;
@@ -467,7 +467,7 @@
 
     /** @param {string} expr */
     function isPlainMultiplyPQ(expr) {
-      const e = expr.replace(/\s+/g, "");
+      const e = expr.replace(/\s+/g, "").toUpperCase();
       return e === "P*Q" || e === "Q*P";
     }
 
