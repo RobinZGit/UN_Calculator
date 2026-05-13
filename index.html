@@ -84,9 +84,16 @@
     }
     button:hover { filter: brightness(1.08); }
     button:active { transform: translateY(1px); }
-    .out {
+    .out-results {
       margin-top: 1rem;
       max-width: none;
+    }
+    .out-results > .out {
+      margin-top: 0;
+      max-width: none;
+    }
+    .out-results .charts:not([hidden]) {
+      margin-bottom: 1rem;
     }
     .out section {
       border: 1px solid var(--border);
@@ -201,7 +208,7 @@
     }
 
     .charts {
-      margin-top: 1rem;
+      margin-top: 0;
       max-width: none;
       width: 100%;
     }
@@ -272,7 +279,7 @@
 <body>
   <header class="page-header">
     <div class="page-header-main">
-      <h1>Умножение многочленов и то же самое через «длинное» целое <span class="form-version">v5</span></h1>
+      <h1>Умножение многочленов и то же самое через «длинное» целое <span class="form-version">v6</span></h1>
       <p class="lead">
         Коэффициенты задаются от младшей степени к старшей: <span class="mono">a₀; a₁; a₂ …</span> (между ними — только <span class="mono">;</span>, в числе — только цифры и точка) для
         <span class="mono">a₀ + a₁x + a₂x² + …</span>.
@@ -292,7 +299,7 @@
 
   <div class="grid">
     <fieldset>
-      <legend>Входные данные <span class="form-version">v5</span></legend>
+      <legend>Входные данные <span class="form-version">v6</span></legend>
       <div class="row">
         <div style="min-width: 16rem;">
           <label class="switch">
@@ -394,16 +401,6 @@
       </div>
     </fieldset>
 
-    <div class="charts" id="charts">
-      <section>
-        <h2>Графики коэффициентов (по индексам)</h2>
-        <p class="note" style="margin-top:0">
-          По оси X — только целые индексы коэффициентов: 0, 1, 2, … (те, которые реально есть в P, Q и P·Q).
-        </p>
-        <canvas id="polyChart" height="260"></canvas>
-      </section>
-    </div>
-
     <fieldset>
       <legend>Пояснение</legend>
       <p class="note" style="margin-top:0">
@@ -415,7 +412,18 @@
     </fieldset>
   </div>
 
-  <div class="out" id="out"></div>
+  <div class="out-results" id="outResults">
+    <div class="charts" id="charts" hidden>
+      <section>
+        <h2>Графики коэффициентов (по индексам)</h2>
+        <p class="note" style="margin-top:0">
+          По оси X — только целые индексы коэффициентов: 0, 1, 2, … (те, которые реально есть в P, Q и результате операции).
+        </p>
+        <canvas id="polyChart" height="260"></canvas>
+      </section>
+    </div>
+    <div class="out" id="out"></div>
+  </div>
 
   <script>
     /**
@@ -1855,6 +1863,8 @@
         clearPolyChartCanvas();
         if (snap.chart && snap.chart.p && snap.chart.q && snap.chart.r) {
           updateCharts(snap.chart.p, snap.chart.q, snap.chart.r);
+        } else {
+          setPolyChartsBlockVisible(false);
         }
 
         updateCompHVisibility();
@@ -1868,13 +1878,14 @@
     }
 
     /**
-     * Сбрасывает вычисленный вывод: очищает #out, поля результатов p3/p1c/p2c и canvas графика.
+     * Сбрасывает вычисленный вывод: очищает #out, поля результатов p3/p1c/p2c, canvas графика и скрывает блок графика.
      * Вызывается при изменении входных данных, чтобы не показывать устаревший результат.
      */
     function resetOutputs() {
       updateCompHVisibility();
       const out = document.getElementById("out");
       if (out) out.innerHTML = "";
+      setPolyChartsBlockVisible(false);
       const p3 = /** @type {HTMLTextAreaElement|null} */ (document.getElementById("p3"));
       if (p3) p3.value = "";
       const p1c = /** @type {HTMLTextAreaElement|null} */ (document.getElementById("p1c"));
@@ -2015,6 +2026,15 @@
         // единое поведение: при изменении коэффициентов сбрасываем результаты/график
         if (id === "p1" || id === "p2") resetOutputs();
       });
+    }
+
+    /**
+     * Показывает или скрывает блок с canvas-графиком (только для одномерного ввода без скобок).
+     * @param {boolean} visible
+     */
+    function setPolyChartsBlockVisible(visible) {
+      const el = document.getElementById("charts");
+      if (el) el.hidden = !visible;
     }
 
     /**
@@ -2232,6 +2252,7 @@
      * @param {number[]} rCoeffs
      */
     function updateCharts(pCoeffs, qCoeffs, rCoeffs) {
+      setPolyChartsBlockVisible(true);
       drawCoeffChartCanvas2D(pCoeffs, qCoeffs, rCoeffs);
     }
 
@@ -2352,8 +2373,8 @@
       html += `<pre>${formatNestedBigForDisplay(resTree, result.scalePow, n)}</pre>`;
       html += `</section>`;
 
-      html += `<section><h2>График</h2><p class="note">График коэффициентов строится только для одномерного ввода без скобок; здесь график не показан.</p></section>`;
       clearPolyChartCanvas();
+      setPolyChartsBlockVisible(false);
 
       if (isPlainMultiplyPQ(opExpr)) {
         const prodObj = sparseWithZeroFallback(sparseMulObjMV(Pobj, Qobj, n));
@@ -2406,6 +2427,7 @@
       const maxLong = Math.max(30, Math.min(5000, maxLongState));
       lastChartSnapshot = null;
       out.innerHTML = "";
+      setPolyChartsBlockVisible(false);
       const n = Math.max(0, Math.min(30, parseInt(document.getElementById("nDec").value, 10) || 0));
       const opExpr = String((/** @type {HTMLInputElement} */ (document.getElementById("opExpr"))).value || "").trim();
       const compHText = String((/** @type {HTMLInputElement} */ (document.getElementById("compH"))).value || "").trim();
