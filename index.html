@@ -211,7 +211,7 @@
         <div>
           <label for="opExpr">Операция над многочленами (P и Q)</label>
           <input id="opExpr" value="P*Q" />
-          <p class="note" style="margin:0.35rem 0 0;">Поддерживается: <span class="mono">+</span> (сумма), <span class="mono">*</span> (умножение). Пример: <span class="mono">P*Q + P</span>.</p>
+          <p class="note" style="margin:0.35rem 0 0;">Поддерживается: <span class="mono">+</span> (сумма), <span class="mono">*</span> (умножение), <span class="mono">^</span> (целая степень). Пример: <span class="mono">(P+Q)^3 + P*Q</span>.</p>
         </div>
       </div>
       <button type="button" id="btn">Выполнить операцию: P*Q</button>
@@ -372,14 +372,36 @@
       return a.map((x) => x * m);
     }
 
+    /** @param {bigint[]} p @param {number} k */
+    function polyPowBig(p, k) {
+      if (!Number.isInteger(k) || k < 0) throw new Error("Степень должна быть целым числом ≥ 0");
+      let base = trimPoly(p);
+      if (k === 0) return [1n];
+      let res = [1n];
+      let e = k;
+      while (e > 0) {
+        if (e & 1) res = polyMulBig(res, base);
+        e >>= 1;
+        if (e) base = polyMulBig(base, base);
+      }
+      return res;
+    }
+
     function tokenizeExpr(s) {
       const t = [];
       let i = 0;
       while (i < s.length) {
         const ch = s[i];
         if (/\s/.test(ch)) { i++; continue; }
-        if (ch === "+" || ch === "*" || ch === "(" || ch === ")") { t.push(ch); i++; continue; }
+        if (ch === "+" || ch === "*" || ch === "^" || ch === "(" || ch === ")") { t.push(ch); i++; continue; }
         if (ch === "P" || ch === "Q") { t.push(ch); i++; continue; }
+        if (/\d/.test(ch)) {
+          let j = i + 1;
+          while (j < s.length && /\d/.test(s[j])) j++;
+          t.push(s.slice(i, j));
+          i = j;
+          continue;
+        }
         throw new Error(`Неизвестный символ в операции: '${ch}'`);
       }
       return t;
@@ -388,13 +410,17 @@
     function parseToRpn(tokens) {
       const out = [];
       const ops = [];
-      const prec = { "+": 1, "*": 2 };
+      const prec = { "+": 1, "*": 2, "^": 3 };
+      const rightAssoc = { "^": true };
       for (const tok of tokens) {
-        if (tok === "P" || tok === "Q") out.push(tok);
-        else if (tok === "+" || tok === "*") {
+        if (tok === "P" || tok === "Q" || /^\d+$/.test(tok)) out.push(tok);
+        else if (tok === "+" || tok === "*" || tok === "^") {
           while (ops.length) {
             const top = ops[ops.length - 1];
-            if ((top === "+" || top === "*") && prec[top] >= prec[tok]) out.push(ops.pop());
+            if (
+              (top === "+" || top === "*" || top === "^") &&
+              (rightAssoc[tok] ? prec[top] > prec[tok] : prec[top] >= prec[tok])
+            ) out.push(ops.pop());
             else break;
           }
           ops.push(tok);
@@ -818,7 +844,7 @@
       }
 
       const p3 = /** @type {HTMLTextAreaElement|null} */ (document.getElementById("p3"));
-      // вычисляем выражение над многочленами (P, Q) с операторами + и *
+      // вычисляем выражение над многочленами (P, Q) с операторами +, *, ^
       let result = null;
       try {
         const tokens = tokenizeExpr(opExpr);
@@ -828,7 +854,8 @@
         for (const tok of rpn) {
           if (tok === "P") st.push({ coeffs: c.slice(), scalePow: n });
           else if (tok === "Q") st.push({ coeffs: d.slice(), scalePow: n });
-          else if (tok === "+" || tok === "*") {
+          else if (/^\d+$/.test(tok)) st.push({ coeffs: [BigInt(tok)], scalePow: 0 });
+          else if (tok === "+" || tok === "*" || tok === "^") {
             const b = st.pop(); const a = st.pop();
             if (!a || !b) throw new Error("Неверное выражение");
             if (tok === "+") {
@@ -836,8 +863,14 @@
               const aa = a.scalePow === sp ? a.coeffs : scalePoly(a.coeffs, sp - a.scalePow);
               const bb = b.scalePow === sp ? b.coeffs : scalePoly(b.coeffs, sp - b.scalePow);
               st.push({ coeffs: polyAddBig(aa, bb), scalePow: sp });
-            } else {
+            } else if (tok === "*") {
               st.push({ coeffs: polyMulBig(a.coeffs, b.coeffs), scalePow: a.scalePow + b.scalePow });
+            } else {
+              // a ^ b, где b — целое число (0 масштаб)
+              if (b.scalePow !== 0 || b.coeffs.length !== 1) throw new Error("Степень должна быть целым числом");
+              const exp = Number(b.coeffs[0]);
+              if (!Number.isSafeInteger(exp) || exp < 0) throw new Error("Степень должна быть целым числом ≥ 0");
+              st.push({ coeffs: polyPowBig(a.coeffs, exp), scalePow: a.scalePow * exp });
             }
           } else throw new Error("Неверное выражение");
         }
