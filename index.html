@@ -709,7 +709,7 @@
       html += `<pre>Свёртка (коэффициенты P·Q в целых после масштаба 10^${n}):\n[${prod.map((x) => x.toString()).join(", ")}]\n\nΣ S_k B^k = ${expandedSum.toString()}\nP(B)·Q(B)   = ${productInt.toString()}</pre>`;
       html += `</section>`;
 
-      html += `<section><h2>Окно умножения «столбиком» (|P(B)| и |Q(B)|)</h2>`;
+      html += `<details><summary style="cursor:pointer; color: #5b9fd4; font-weight: 600; margin: 0.25rem 0 0.5rem;">Окно умножения «столбиком» (|P(B)| и |Q(B)|)</summary><section style="margin-top:0.75rem;">`;
       const ua = A < 0n ? (-A).toString(10) : A.toString(10);
       const ub = Cc < 0n ? (-Cc).toString(10) : Cc.toString(10);
       if (A < 0n || Cc < 0n) {
@@ -727,7 +727,7 @@
       }
       html += `<p class="note">Столбик считает <span class="mono">|P(B)|·|Q(B)|</span>; сравнение с <span class="mono">|P(B)·Q(B)|</span>: <strong>${lmOkText}</strong>.</p>`;
       html += `<pre>|P(B)|·|Q(B)| (столбик) = ${longMul.sum ?? "—"}\n|P(B)·Q(B)|            = ${absProd.toString(10)}</pre>`;
-      html += `</section>`;
+      html += `</section></details>`;
 
       out.innerHTML = html;
 
