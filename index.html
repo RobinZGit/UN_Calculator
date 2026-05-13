@@ -818,6 +818,14 @@
     function enableCoeffTextareaDnd(id) {
       const el = /** @type {HTMLTextAreaElement|null} */ (document.getElementById(id));
       if (!el) return;
+      // На мобильных браузерах draggable часто ломает обычный ввод/выделение.
+      const dndOk =
+        typeof window !== "undefined" &&
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(pointer: fine)").matches &&
+        !window.matchMedia("(hover: none)").matches;
+      if (!dndOk) return;
+
       el.setAttribute("draggable", "true");
 
       el.addEventListener("dragstart", (ev) => {
