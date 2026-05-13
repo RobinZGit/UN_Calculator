@@ -398,6 +398,46 @@
       return coeffsBig.map((bi) => scaledBigintToFixedN(bi, scalePow, n)).join("; ");
     }
 
+    function coeffsToTextareaStringDisplay(coeffsBig, scalePow, n) {
+      const desc = /** @type {HTMLInputElement} */ (document.getElementById("descOrder")).checked;
+      const a = desc ? coeffsBig.slice().reverse() : coeffsBig;
+      return coeffsToTextareaString(a, scalePow, n);
+    }
+
+    function divRoundHalfUpSigned(num, den) {
+      if (den <= 0n) throw new Error("den must be > 0");
+      const neg = num < 0n;
+      const abs = neg ? -num : num;
+      let q = abs / den;
+      const r = abs % den;
+      if (r * 2n >= den) q += 1n;
+      return neg ? -q : q;
+    }
+
+    /** Умножение многочленов с фиксированным масштабом 10^n: (a*b)/10^n с округлением */
+    function polyMulFixedScale(a, b, n) {
+      const den = pow10(n);
+      const len = a.length + b.length - 1;
+      const r = Array.from({ length: len }, () => 0n);
+      for (let i = 0; i < a.length; i++) {
+        for (let j = 0; j < b.length; j++) {
+          r[i + j] += a[i] * b[j];
+        }
+      }
+      for (let k = 0; k < r.length; k++) r[k] = divRoundHalfUpSigned(r[k], den);
+      return trimPoly(r);
+    }
+
+    /** Композиция P(h(x)) при фиксированном масштабе 10^n (коэффициенты P и h уже в масштабе 10^n). */
+    function polyComposeFixedScale(pCoeffs, hCoeffs, n) {
+      let res = [0n];
+      for (let i = pCoeffs.length - 1; i >= 0; i--) {
+        res = polyMulFixedScale(res, hCoeffs, n);
+        res = polyAddBig(res, [pCoeffs[i]]);
+      }
+      return trimPoly(res);
+    }
+
     /** @param {bigint[]} a @param {bigint[]} b */
     function polyAddBig(a, b) {
       const len = Math.max(a.length, b.length);
@@ -446,16 +486,7 @@
       return res;
     }
 
-    /** @param {{coeffs: bigint[], scalePow: number}} p @param {{coeffs: bigint[], scalePow: number}} h */
-    function polyComposeObj(p, h) {
-      // Horner: (...((a_n)*h + a_{n-1})*h + ... + a_0)
-      let res = { coeffs: [0n], scalePow: p.scalePow };
-      for (let i = p.coeffs.length - 1; i >= 0; i--) {
-        res = polyMulObj(res, h);
-        res = polyAddObj(res, { coeffs: [p.coeffs[i]], scalePow: p.scalePow });
-      }
-      return { coeffs: trimPoly(res.coeffs), scalePow: res.scalePow };
-    }
+    // polyComposeObj оставляем для общего случая, но для пользовательской композиции используем fixed-scale реализацию выше.
 
     function tokenizeExpr(s) {
       const t = [];
@@ -937,11 +968,11 @@
           return;
         }
         const hBig = hRaw.map((x) => toScaledBigInt(x, n));
-        const H = { coeffs: trimPoly(hBig), scalePow: n };
-        P = polyComposeObj(P, H);
-        Q = polyComposeObj(Q, H);
-        if (p1cEl) p1cEl.value = coeffsToTextareaString(P.coeffs, P.scalePow, n);
-        if (p2cEl) p2cEl.value = coeffsToTextareaString(Q.coeffs, Q.scalePow, n);
+        const Hcoeffs = trimPoly(hBig);
+        P = { coeffs: polyComposeFixedScale(P.coeffs, Hcoeffs, n), scalePow: n };
+        Q = { coeffs: polyComposeFixedScale(Q.coeffs, Hcoeffs, n), scalePow: n };
+        if (p1cEl) p1cEl.value = coeffsToTextareaStringDisplay(P.coeffs, P.scalePow, n);
+        if (p2cEl) p2cEl.value = coeffsToTextareaStringDisplay(Q.coeffs, Q.scalePow, n);
       } else {
         if (p1cEl) p1cEl.value = "";
         if (p2cEl) p2cEl.value = "";
@@ -984,7 +1015,7 @@
         return;
       }
 
-      if (p3) p3.value = coeffsToTextareaString(result.coeffs, result.scalePow, n);
+      if (p3) p3.value = coeffsToTextareaStringDisplay(result.coeffs, result.scalePow, n);
 
       const resultRounded = result.coeffs.map((bi) => Number(scaledBigintToFixedN(bi, result.scalePow, n)));
 
