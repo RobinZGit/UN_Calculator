@@ -224,6 +224,10 @@
           <label for="nDec">n — знаков после запятой при округлении</label>
           <input type="number" id="nDec" min="0" max="30" value="2" />
         </div>
+        <div>
+          <label for="compH">x = … (композиция p(x) и q(x))</label>
+          <input id="compH" placeholder="например: 0; 1 (это x) или 1; 1 (это 1+x)" />
+        </div>
       </div>
       <div class="row" style="margin-bottom: 0.25rem;">
         <div>
@@ -251,6 +255,16 @@
         <div>
           <label for="p3">Коэффициенты результата (в том же формате)</label>
           <textarea id="p3" readonly placeholder="Нажмите «Выполнить операцию…», чтобы увидеть коэффициенты результата"></textarea>
+        </div>
+      </div>
+      <div class="row" style="margin-top: 0.25rem;">
+        <div>
+          <label for="p1c">P(h(x)) (после композиции)</label>
+          <textarea id="p1c" readonly placeholder="Заполнится, если поле композиции не пусто"></textarea>
+        </div>
+        <div>
+          <label for="p2c">Q(h(x)) (после композиции)</label>
+          <textarea id="p2c" readonly placeholder="Заполнится, если поле композиции не пусто"></textarea>
         </div>
       </div>
     </fieldset>
@@ -392,6 +406,19 @@
       return trimPoly(r);
     }
 
+    /** @param {{coeffs: bigint[], scalePow: number}} a @param {{coeffs: bigint[], scalePow: number}} b */
+    function polyAddObj(a, b) {
+      const sp = Math.max(a.scalePow, b.scalePow);
+      const aa = a.scalePow === sp ? a.coeffs : scalePoly(a.coeffs, sp - a.scalePow);
+      const bb = b.scalePow === sp ? b.coeffs : scalePoly(b.coeffs, sp - b.scalePow);
+      return { coeffs: polyAddBig(aa, bb), scalePow: sp };
+    }
+
+    /** @param {{coeffs: bigint[], scalePow: number}} a @param {{coeffs: bigint[], scalePow: number}} b */
+    function polyMulObj(a, b) {
+      return { coeffs: polyMulBig(a.coeffs, b.coeffs), scalePow: a.scalePow + b.scalePow };
+    }
+
     function trimPoly(a) {
       let k = a.length - 1;
       while (k > 0 && a[k] === 0n) k--;
@@ -417,6 +444,17 @@
         if (e) base = polyMulBig(base, base);
       }
       return res;
+    }
+
+    /** @param {{coeffs: bigint[], scalePow: number}} p @param {{coeffs: bigint[], scalePow: number}} h */
+    function polyComposeObj(p, h) {
+      // Horner: (...((a_n)*h + a_{n-1})*h + ... + a_0)
+      let res = { coeffs: [0n], scalePow: p.scalePow };
+      for (let i = p.coeffs.length - 1; i >= 0; i--) {
+        res = polyMulObj(res, h);
+        res = polyAddObj(res, { coeffs: [p.coeffs[i]], scalePow: p.scalePow });
+      }
+      return { coeffs: trimPoly(res.coeffs), scalePow: res.scalePow };
     }
 
     function tokenizeExpr(s) {
@@ -735,6 +773,10 @@
       if (out) out.innerHTML = "";
       const p3 = /** @type {HTMLTextAreaElement|null} */ (document.getElementById("p3"));
       if (p3) p3.value = "";
+      const p1c = /** @type {HTMLTextAreaElement|null} */ (document.getElementById("p1c"));
+      const p2c = /** @type {HTMLTextAreaElement|null} */ (document.getElementById("p2c"));
+      if (p1c) p1c.value = "";
+      if (p2c) p2c.value = "";
       if (polyChart) {
         polyChart.destroy();
         polyChart = null;
@@ -851,6 +893,7 @@
       out.innerHTML = "";
       const n = Math.max(0, Math.min(30, parseInt(document.getElementById("nDec").value, 10) || 0));
       const opExpr = String((/** @type {HTMLInputElement} */ (document.getElementById("opExpr"))).value || "").trim();
+      const compHText = String((/** @type {HTMLInputElement} */ (document.getElementById("compH"))).value || "").trim();
 
       let raw1, raw2;
       try {
@@ -879,6 +922,30 @@
       }
 
       const p3 = /** @type {HTMLTextAreaElement|null} */ (document.getElementById("p3"));
+      const p1cEl = /** @type {HTMLTextAreaElement|null} */ (document.getElementById("p1c"));
+      const p2cEl = /** @type {HTMLTextAreaElement|null} */ (document.getElementById("p2c"));
+
+      // Если задано x = h(x), то заменяем P и Q на композиции P(h) и Q(h)
+      let P = { coeffs: c.slice(), scalePow: n };
+      let Q = { coeffs: d.slice(), scalePow: n };
+      if (compHText) {
+        let hRaw;
+        try {
+          hRaw = maybeReverseInputOrder(parseCoeffs(compHText));
+        } catch (e) {
+          out.innerHTML = `<section><h2>Ошибка в композиции</h2><pre>${String(e)}</pre></section>`;
+          return;
+        }
+        const hBig = hRaw.map((x) => toScaledBigInt(x, n));
+        const H = { coeffs: trimPoly(hBig), scalePow: n };
+        P = polyComposeObj(P, H);
+        Q = polyComposeObj(Q, H);
+        if (p1cEl) p1cEl.value = coeffsToTextareaString(P.coeffs, P.scalePow, n);
+        if (p2cEl) p2cEl.value = coeffsToTextareaString(Q.coeffs, Q.scalePow, n);
+      } else {
+        if (p1cEl) p1cEl.value = "";
+        if (p2cEl) p2cEl.value = "";
+      }
       // вычисляем выражение над многочленами (P, Q) с операторами +, *, ^
       let result = null;
       try {
@@ -887,8 +954,8 @@
         /** @type {{ coeffs: bigint[], scalePow: number }[]} */
         const st = [];
         for (const tok of rpn) {
-          if (tok === "P") st.push({ coeffs: c.slice(), scalePow: n });
-          else if (tok === "Q") st.push({ coeffs: d.slice(), scalePow: n });
+          if (tok === "P") st.push({ coeffs: P.coeffs.slice(), scalePow: P.scalePow });
+          else if (tok === "Q") st.push({ coeffs: Q.coeffs.slice(), scalePow: Q.scalePow });
           else if (/^\d+$/.test(tok)) st.push({ coeffs: [BigInt(tok)], scalePow: 0 });
           else if (tok === "+" || tok === "*" || tok === "^") {
             const b = st.pop(); const a = st.pop();
@@ -924,8 +991,10 @@
       let html = "";
 
       html += `<section><h2>Округлённые многочлены (до ${n} знаков)</h2>`;
-      html += `<p><span class="mono">P̃(x) = ${formatPolyFloat(rounded1, n)}</span></p>`;
-      html += `<p><span class="mono">Q̃(x) = ${formatPolyFloat(rounded2, n)}</span></p>`;
+      const pRoundedCoeffs = P.coeffs.map((bi) => Number(scaledBigintToFixedN(bi, P.scalePow, n)));
+      const qRoundedCoeffs = Q.coeffs.map((bi) => Number(scaledBigintToFixedN(bi, Q.scalePow, n)));
+      html += `<p><span class="mono">P̃(x) = ${formatPolyFloat(pRoundedCoeffs, n)}</span></p>`;
+      html += `<p><span class="mono">Q̃(x) = ${formatPolyFloat(qRoundedCoeffs, n)}</span></p>`;
       html += `<p><span class="mono">Операция: ${opExpr || "—"}</span></p>`;
       html += `<p>Целые коэффициенты после умножения на 10<sup>${n}</sup>:</p>`;
       html += `<pre>c = [${c.map((x) => x.toString()).join(", ")}]\nd = [${d.map((x) => x.toString()).join(", ")}]</pre>`;
@@ -937,22 +1006,22 @@
       html += `</section>`;
 
       if (isPlainMultiplyPQ(opExpr)) {
-        const prod = polyMulBig(c, d);
-        const L = minDigitLengthPow10(c, d, prod);
+        const prod = polyMulBig(P.coeffs, Q.coeffs);
+        const L = minDigitLengthPow10(P.coeffs, Q.coeffs, prod);
         const B = 10n ** L;
-        const checkSource = [...c, ...d].every((x) => absBig(x) < B);
+        const checkSource = [...P.coeffs, ...Q.coeffs].every((x) => absBig(x) < B);
         const checkProd = prod.every((s) => absBig(s) < B);
         const checkDigits = checkSource && checkProd;
-        const { value: A } = polyEvalBasePow10(c, L);
-        const { value: Cc } = polyEvalBasePow10(d, L);
+        const { value: A } = polyEvalBasePow10(P.coeffs, L);
+        const { value: Cc } = polyEvalBasePow10(Q.coeffs, L);
         const productInt = A * Cc;
         const expandedSum = polyValueAtBase(prod, B);
         const same = expandedSum === productInt;
         const sA = A < 0n ? "-" + (-A).toString(10) : A.toString(10);
         const sB = Cc < 0n ? "-" + (-Cc).toString(10) : Cc.toString(10);
         const sP = productInt < 0n ? "-" + (-productInt).toString(10) : productInt.toString(10);
-        const blockP = paddedBlocksString(c, L);
-        const blockQ = paddedBlocksString(d, L);
+        const blockP = paddedBlocksString(P.coeffs, L);
+        const blockQ = paddedBlocksString(Q.coeffs, L);
 
         html += `<section><h2>Кодирование в целые P(B) и Q(B) (только для P*Q)</h2>`;
         html += `<p>Основание разрядной сетки: <span class="mono">B = 10<sup>${L}</sup> = ${B.toString()}</span>.</p>`;
@@ -989,7 +1058,7 @@
 
       // графики обновляем после расчёта, чтобы n/округление совпадали с текстом
       if (typeof Chart !== "undefined") {
-        updateCharts(rounded1, rounded2, resultRounded);
+        updateCharts(pRoundedCoeffs, qRoundedCoeffs, resultRounded);
       }
     }
 
@@ -1000,6 +1069,7 @@
     });
     document.getElementById("p1").addEventListener("input", resetOutputs);
     document.getElementById("p2").addEventListener("input", resetOutputs);
+    document.getElementById("compH").addEventListener("input", resetOutputs);
     document.getElementById("opExpr").addEventListener("input", () => {
       updateOperationUi();
       resetOutputs();
