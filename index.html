@@ -580,6 +580,33 @@
       }
     }
 
+    /** Drag&Drop: перетаскиваем содержимое одного поля в другое (полная замена) */
+    function enableCoeffTextareaDnd(id) {
+      const el = /** @type {HTMLTextAreaElement|null} */ (document.getElementById(id));
+      if (!el) return;
+      el.setAttribute("draggable", "true");
+
+      el.addEventListener("dragstart", (ev) => {
+        if (!ev.dataTransfer) return;
+        ev.dataTransfer.setData("text/plain", el.value);
+        ev.dataTransfer.effectAllowed = "copyMove";
+      });
+
+      el.addEventListener("dragover", (ev) => {
+        ev.preventDefault();
+        if (ev.dataTransfer) ev.dataTransfer.dropEffect = "copy";
+      });
+
+      el.addEventListener("drop", (ev) => {
+        ev.preventDefault();
+        if (!ev.dataTransfer) return;
+        const txt = ev.dataTransfer.getData("text/plain");
+        el.value = txt;
+        // единое поведение: при изменении коэффициентов сбрасываем результаты/график
+        if (id === "p1" || id === "p2") resetOutputs();
+      });
+    }
+
     function updateCharts(rounded1, rounded2, n) {
       const pq = polyMulFloat(rounded1, rounded2).map((v) => roundFixed(v, n));
       const maxLen = Math.max(rounded1.length, rounded2.length, pq.length);
@@ -779,6 +806,10 @@
     document.getElementById("p1").addEventListener("input", resetOutputs);
     document.getElementById("p2").addEventListener("input", resetOutputs);
     updateOrderModeText();
+
+    enableCoeffTextareaDnd("p1");
+    enableCoeffTextareaDnd("p2");
+    enableCoeffTextareaDnd("p3");
   </script>
 </body>
 </html>
