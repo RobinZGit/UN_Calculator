@@ -272,7 +272,7 @@
 <body>
   <header class="page-header">
     <div class="page-header-main">
-      <h1>Умножение многочленов и то же самое через «длинное» целое <span class="form-version">v4</span></h1>
+      <h1>Умножение многочленов и то же самое через «длинное» целое <span class="form-version">v5</span></h1>
       <p class="lead">
         Коэффициенты задаются от младшей степени к старшей: <span class="mono">a₀; a₁; a₂ …</span> (между ними — только <span class="mono">;</span>, в числе — только цифры и точка) для
         <span class="mono">a₀ + a₁x + a₂x² + …</span>.
@@ -292,7 +292,7 @@
 
   <div class="grid">
     <fieldset>
-      <legend>Входные данные <span class="form-version">v4</span></legend>
+      <legend>Входные данные <span class="form-version">v5</span></legend>
       <div class="row">
         <div style="min-width: 16rem;">
           <label class="switch">
@@ -2039,12 +2039,27 @@
     function drawCoeffChartCanvas2D(pCoeffs, qCoeffs, rCoeffs) {
       const canvas = /** @type {HTMLCanvasElement|null} */ (document.getElementById("polyChart"));
       if (!canvas) return;
-      const parent = canvas.parentElement;
-      const cssW = Math.max(280, parent ? parent.clientWidth : 600);
-      const cssH = 260;
+      // Не задаём canvas.style.width в px от parent.clientWidth: у section есть padding,
+      // плюс в grid min-width:auto — каждый пересчёт чуть увеличивал ширину ячейки.
+      // Размеры экрана — из CSS (width:100%, height: clamp…), битмап подстраиваем под clientWidth/Height.
+      canvas.style.width = "";
+      canvas.style.height = "";
+      void canvas.offsetWidth;
+      let cssW = canvas.clientWidth;
+      let cssH = canvas.clientHeight;
+      if (cssW < 4) {
+        const par = canvas.parentElement;
+        if (par) {
+          const st = getComputedStyle(par);
+          const pl = parseFloat(st.paddingLeft) || 0;
+          const pr = parseFloat(st.paddingRight) || 0;
+          cssW = Math.max(280, par.clientWidth - pl - pr);
+        } else cssW = 600;
+      }
+      if (cssH < 4) cssH = 260;
+      cssW = Math.max(280, cssW);
+      cssH = Math.max(180, cssH);
       const dpr = typeof window !== "undefined" && window.devicePixelRatio ? window.devicePixelRatio : 1;
-      canvas.style.width = `${cssW}px`;
-      canvas.style.height = `${cssH}px`;
       canvas.width = Math.floor(cssW * dpr);
       canvas.height = Math.floor(cssH * dpr);
 
