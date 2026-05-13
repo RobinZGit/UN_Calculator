@@ -10,8 +10,10 @@
 
      git config core.hooksPath .githooks
 
-   Хук pre-commit вызывает scripts/bump_form_version.py hook (или bump-form-version.ps1, если нет python3)
-   и снова делает git add index.html.
+   Хук pre-commit снова делает git add index.html.
+   На Windows (Git Bash) сначала вызывается bump-form-version.ps1 или py -3, затем python3/python —
+   чтобы не попасть на заглушку Microsoft Store (WindowsApps\python.exe).
+   На Linux/macOS — python3/python, затем PowerShell при необходимости.
 
 2) На GitHub (если хук не настроен)
    Создайте в репозитории файл .github/workflows/bump-page-version.yml (содержимое скопируйте из

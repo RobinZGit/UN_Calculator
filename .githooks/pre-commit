@@ -3,16 +3,42 @@
 set -e
 ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT" || exit 1
-if command -v python3 >/dev/null 2>&1; then
-  python3 "$ROOT/scripts/bump_form_version.py" hook
-elif command -v python >/dev/null 2>&1; then
-  python "$ROOT/scripts/bump_form_version.py" hook
-elif command -v pwsh >/dev/null 2>&1; then
-  pwsh -NoProfile -ExecutionPolicy Bypass -File "$ROOT/scripts/bump-form-version.ps1"
-elif command -v powershell.exe >/dev/null 2>&1; then
-  powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$ROOT/scripts/bump-form-version.ps1"
-else
-  echo "bump-form-version: нужны python3/python или PowerShell (pwsh/powershell.exe) в PATH." >&2
-  exit 1
-fi
+
+OS="$(uname -s 2>/dev/null || echo unknown)"
+
+# На Windows (Git Bash) в PATH часто первым идёт WindowsApps\python.exe — заглушка Store, не интерпретатор.
+# Сначала PowerShell или py -3, иначе коммит из VS Code падает с «Python».
+case "$OS" in
+  MINGW*|MSYS*|CYGWIN*)
+    if command -v pwsh >/dev/null 2>&1; then
+      pwsh -NoProfile -ExecutionPolicy Bypass -File "$ROOT/scripts/bump-form-version.ps1"
+    elif command -v powershell.exe >/dev/null 2>&1; then
+      powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$ROOT/scripts/bump-form-version.ps1"
+    elif command -v py >/dev/null 2>&1; then
+      py -3 "$ROOT/scripts/bump_form_version.py" hook
+    elif command -v python3 >/dev/null 2>&1; then
+      python3 "$ROOT/scripts/bump_form_version.py" hook
+    elif command -v python >/dev/null 2>&1; then
+      python "$ROOT/scripts/bump_form_version.py" hook
+    else
+      echo "bump-form-version: на Windows нужны pwsh/powershell.exe, py -3, python3 или python в PATH." >&2
+      exit 1
+    fi
+    ;;
+  *)
+    if command -v python3 >/dev/null 2>&1; then
+      python3 "$ROOT/scripts/bump_form_version.py" hook
+    elif command -v python >/dev/null 2>&1; then
+      python "$ROOT/scripts/bump_form_version.py" hook
+    elif command -v pwsh >/dev/null 2>&1; then
+      pwsh -NoProfile -ExecutionPolicy Bypass -File "$ROOT/scripts/bump-form-version.ps1"
+    elif command -v powershell.exe >/dev/null 2>&1; then
+      powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$ROOT/scripts/bump-form-version.ps1"
+    else
+      echo "bump-form-version: нужны python3/python или PowerShell (pwsh/powershell.exe) в PATH." >&2
+      exit 1
+    fi
+    ;;
+esac
+
 git add index.html
