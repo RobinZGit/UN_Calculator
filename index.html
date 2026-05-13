@@ -141,7 +141,8 @@
 
     .charts {
       margin-top: 1rem;
-      max-width: 58rem;
+      max-width: none;
+      width: 100%;
     }
     .charts section {
       border: 1px solid var(--border);
@@ -538,6 +539,15 @@
 
     let polyChart = null;
 
+    function resetOutputs() {
+      const out = document.getElementById("out");
+      if (out) out.innerHTML = "";
+      if (polyChart) {
+        polyChart.destroy();
+        polyChart = null;
+      }
+    }
+
     function updateCharts(rounded1, rounded2, n) {
       const pq = polyMulFloat(rounded1, rounded2).map((v) => roundFixed(v, n));
       const maxLen = Math.max(rounded1.length, rounded2.length, pq.length);
@@ -732,6 +742,8 @@
       updateOrderModeText();
       run();
     });
+    document.getElementById("p1").addEventListener("input", resetOutputs);
+    document.getElementById("p2").addEventListener("input", resetOutputs);
     updateOrderModeText();
   </script>
 </body>
