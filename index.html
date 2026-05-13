@@ -27,6 +27,15 @@
       padding: 1.25rem clamp(1rem, 3vw, 2rem);
     }
     h1 { font-size: 1.35rem; font-weight: 600; margin: 0 0 0.5rem; }
+    h1 .form-version {
+      font-weight: 600;
+      color: var(--muted);
+      font-size: 0.72em;
+      margin-left: 0.35rem;
+      vertical-align: middle;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
     p.lead { color: var(--muted); margin: 0 0 1.25rem; font-size: 0.95rem; max-width: none; }
     .grid {
       display: grid;
@@ -193,7 +202,7 @@
   </style>
 </head>
 <body>
-  <h1>Умножение многочленов и то же самое через «длинное» целое</h1>
+  <h1>Умножение многочленов и то же самое через «длинное» целое <span class="form-version">v1</span></h1>
   <p class="lead">
     Коэффициенты задаются от младшей степени к старшей: <span class="mono">a₀; a₁; a₂ …</span> (между ними — только <span class="mono">;</span>, в числе — только цифры и точка) для
     <span class="mono">a₀ + a₁x + a₂x² + …</span>.
