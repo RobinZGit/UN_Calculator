@@ -845,11 +845,11 @@
 
     function run() {
       const out = document.getElementById("out");
-      out.innerHTML = "";
-      const n = Math.max(0, Math.min(30, parseInt(document.getElementById("nDec").value, 10) || 0));
       const maxLongEl = /** @type {HTMLInputElement|null} */ (document.getElementById("maxLong"));
       if (maxLongEl) maxLongState = parseInt(maxLongEl.value, 10) || maxLongState;
       const maxLong = Math.max(30, Math.min(5000, maxLongState));
+      out.innerHTML = "";
+      const n = Math.max(0, Math.min(30, parseInt(document.getElementById("nDec").value, 10) || 0));
       const opExpr = String((/** @type {HTMLInputElement} */ (document.getElementById("opExpr"))).value || "").trim();
 
       let raw1, raw2;
@@ -984,7 +984,7 @@
       out.innerHTML = html;
       const newMaxLongEl = /** @type {HTMLInputElement|null} */ (document.getElementById("maxLong"));
       if (newMaxLongEl) {
-        newMaxLongEl.addEventListener("change", () => run());
+        newMaxLongEl.addEventListener("input", () => run());
       }
 
       // графики обновляем после расчёта, чтобы n/округление совпадали с текстом
