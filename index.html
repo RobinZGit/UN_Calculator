@@ -4,8 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Умножение многочленов и длинная арифметика</title>
-  <!-- Chart.js из vendor/ — интерактивный график; если скрипт не загрузится, график рисуется на Canvas 2D в коде страницы. -->
-  <script src="vendor/chart.umd.min.js"></script>
+  <!-- График коэффициентов — только Canvas 2D в этом файле, без внешних библиотек. -->
   <style>
     :root {
       --bg: #0f1419;
@@ -223,20 +222,77 @@
       border: 1px solid var(--border);
       border-radius: 8px;
     }
+
+    .page-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .page-header-main {
+      flex: 1;
+      min-width: min(100%, 18rem);
+    }
+    .page-header-nav {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+      flex: 0 0 auto;
+    }
+    .page-header-nav button {
+      width: auto;
+      min-width: 2.75rem;
+      margin-top: 0;
+      padding: 0.45rem 0.75rem;
+    }
+    .page-header-nav button:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+      filter: grayscale(0.35);
+    }
+    .nav-history-size {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      margin: 0;
+      font-size: 0.82rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .nav-history-size input {
+      margin: 0;
+      max-width: 3.5rem;
+      padding: 0.35rem 0.45rem;
+    }
   </style>
 </head>
 <body>
-  <h1>Умножение многочленов и то же самое через «длинное» целое <span class="form-version">v2</span></h1>
-  <p class="lead">
-    Коэффициенты задаются от младшей степени к старшей: <span class="mono">a₀; a₁; a₂ …</span> (между ними — только <span class="mono">;</span>, в числе — только цифры и точка) для
-    <span class="mono">a₀ + a₁x + a₂x² + …</span>.
-    Вещественные коэффициенты округляются до <span class="mono">n</span> знаков после запятой, затем умножаются на <span class="mono">10ⁿ</span> и превращаются в целые.
-    Число <span class="mono">P(B) = c₀ + c₁B + c₂B² + …</span> при достаточно большом <span class="mono">B</span> (степень десяти) умножается как целое; коэффициенты произведения многочленов совпадают с «разрядами» разложения <span class="mono">P(B)·Q(B)</span> по степеням <span class="mono">B</span> — без переносов между разрядами.
-  </p>
+  <header class="page-header">
+    <div class="page-header-main">
+      <h1>Умножение многочленов и то же самое через «длинное» целое <span class="form-version">v3</span></h1>
+      <p class="lead">
+        Коэффициенты задаются от младшей степени к старшей: <span class="mono">a₀; a₁; a₂ …</span> (между ними — только <span class="mono">;</span>, в числе — только цифры и точка) для
+        <span class="mono">a₀ + a₁x + a₂x² + …</span>.
+        Вещественные коэффициенты округляются до <span class="mono">n</span> знаков после запятой, затем умножаются на <span class="mono">10ⁿ</span> и превращаются в целые.
+        Число <span class="mono">P(B) = c₀ + c₁B + c₂B² + …</span> при достаточно большом <span class="mono">B</span> (степень десяти) умножается как целое; коэффициенты произведения многочленов совпадают с «разрядами» разложения <span class="mono">P(B)·Q(B)</span> по степеням <span class="mono">B</span> — без переносов между разрядами.
+      </p>
+    </div>
+    <div class="page-header-nav" aria-label="История успешных расчётов">
+      <label class="nav-history-size" for="historyMaxStates" title="Сколько последних успешных расчётов хранить">
+        <span>Шагов</span>
+        <input type="number" id="historyMaxStates" min="1" max="50" value="10" inputmode="numeric" />
+      </label>
+      <button type="button" id="historyBack" title="Предыдущий расчёт" disabled>←</button>
+      <button type="button" id="historyFwd" title="Следующий расчёт" disabled>→</button>
+    </div>
+  </header>
 
   <div class="grid">
     <fieldset>
-      <legend>Входные данные <span class="form-version">v2</span></legend>
+      <legend>Входные данные <span class="form-version">v3</span></legend>
       <div class="row">
         <div style="min-width: 16rem;">
           <label class="switch">
@@ -252,7 +308,7 @@
       </div>
       <div class="row">
         <div>
-          <label for="p1">Коэффициенты P(x) (только цифры, . ; + - и пробелы)</label>
+          <label for="p1">Коэффициенты P: <span class="mono">…;…</span> или вложенно <span class="mono">(…;…)</span> по x₁, x₂, …</label>
           <textarea id="p1" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="1.5; -2; 0.25">1; 2; 1</textarea>
           <div class="poly-io-btns" role="group" aria-label="Буфер обмена: P(x)">
             <button type="button" class="btn-poly-io" data-poly-io="copy" data-target="p1">Копировать</button>
@@ -260,7 +316,7 @@
           </div>
         </div>
         <div>
-          <label for="p2">Коэффициенты Q(x) (только цифры, . ; + - и пробелы)</label>
+          <label for="p2">Коэффициенты Q: <span class="mono">…;…</span> или вложенно <span class="mono">(…;…)</span> по x₁, x₂, …</label>
           <textarea id="p2" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="1; -1">1; -1</textarea>
           <div class="poly-io-btns" role="group" aria-label="Буфер обмена: Q(x)">
             <button type="button" class="btn-poly-io" data-poly-io="copy" data-target="p2">Копировать</button>
@@ -273,7 +329,7 @@
           <label for="nDec">n — знаков после запятой при округлении</label>
           <input type="number" id="nDec" min="0" max="30" value="2" />
         </div>
-        <div>
+        <div id="compHWrap">
           <label for="compH">x = … (коэффициенты h: цифры, . ; + -)</label>
           <input id="compH" type="text" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="например: 0; 1 (это x) или 1; 1 (это 1+x)" />
           <div class="poly-io-btns" role="group" aria-label="Буфер обмена: композиция h">
@@ -438,10 +494,470 @@
         .filter(Boolean)
         .map((t) => {
           const norm = normalizeCoefficientToken(t);
-          const n = Number(norm);
-          if (!Number.isFinite(n)) throw new Error(`Не удалось распознать число: ${t}`);
-          return n;
+          const num = Number(norm);
+          if (!Number.isFinite(num)) throw new Error(`Не удалось распознать число: ${t}`);
+          return num;
         });
+    }
+
+    /** @param {string} s */
+    function fieldUsesNesting(s) {
+      return String(s).includes("(") || String(s).includes(")");
+    }
+
+    /**
+     * Для вложенных многочленов: цифры, пробелы, + - ; . и круглые скобки.
+     * @param {string} s
+     */
+    function sanitizePolyNestedInput(s) {
+      return String(s).replace(/[^\d\s;.()+-]/g, "");
+    }
+
+    /**
+     * Делит строку по «;» на верхнем уровне, не разрывая вложенные ( … ).
+     * @param {string} str
+     * @returns {string[]}
+     */
+    function splitTopLevelSemicolons(str) {
+      const s = str.trim();
+      const parts = [];
+      let depth = 0;
+      let start = 0;
+      for (let i = 0; i < s.length; i++) {
+        const c = s[i];
+        if (c === "(") depth++;
+        else if (c === ")") {
+          depth--;
+          if (depth < 0) throw new Error("Лишняя закрывающая скобка )");
+        } else if (c === ";" && depth === 0) {
+          parts.push(s.slice(start, i).trim());
+          start = i + 1;
+        }
+      }
+      parts.push(s.slice(start).trim());
+      return parts.filter(Boolean);
+    }
+
+    /** Вся строка — одна пара скобок сбалансированно. */
+    function isFullyWrappedParens(s) {
+      const t = s.trim();
+      if (!t.startsWith("(")) return false;
+      let d = 0;
+      for (let i = 0; i < t.length; i++) {
+        if (t[i] === "(") d++;
+        else if (t[i] === ")") {
+          d--;
+          if (d === 0) return i === t.length - 1;
+        }
+      }
+      return false;
+    }
+
+    /** @typedef {bigint | NestedBigInt[]} NestedBigInt */
+
+    /**
+     * Размерность дерева: 0 — константа, иначе 1 + max по детям.
+     * @param {NestedBigInt} p
+     */
+    function nestedDim(p) {
+      if (typeof p === "bigint") return 0;
+      if (!Array.isArray(p) || p.length === 0) throw new Error("Пустой список коэффициентов в скобках");
+      return 1 + Math.max(...p.map(nestedDim));
+    }
+
+    /**
+     * Переключатель порядка: разворачивает каждый уровень массива (все «разряды» сразу).
+     * @param {NestedBigInt} p
+     */
+    function reverseNestedTree(p) {
+      if (typeof p === "bigint") return p;
+      return p.map(reverseNestedTree).reverse();
+    }
+
+    /**
+     * Тот же смысл, что {@link maybeReverseInputOrder}, но для вложенного дерева коэффициентов (все уровни сразу).
+     * @param {NestedBigInt} tree
+     * @returns {NestedBigInt}
+     */
+    function maybeReverseNestedInputOrder(tree) {
+      const desc = /** @type {HTMLInputElement} */ (document.getElementById("descOrder")).checked;
+      return desc ? reverseNestedTree(tree) : tree;
+    }
+
+    /**
+     * Поднимает дерево до размерности targetDim (оборачивает в одиночный список коэффициентов по старшей переменной).
+     * @param {NestedBigInt} node
+     * @param {number} targetDim
+     */
+    function liftPolynomialToDim(node, targetDim) {
+      let v = node;
+      while (nestedDim(v) < targetDim) v = [v];
+      return v;
+    }
+
+    /**
+     * На каждом уровне списка коэффициентов выравнивает вложенную размерность детей до общего максимума.
+     * @param {NestedBigInt} node
+     */
+    function alignSiblingNestedDimensions(node) {
+      if (typeof node === "bigint") return node;
+      const arr = /** @type {NestedBigInt[]} */ (node);
+      const kids = arr.map(alignSiblingNestedDimensions);
+      const maxD = Math.max(...kids.map(nestedDim));
+      return kids.map((ch) => liftPolynomialToDim(ch, maxD));
+    }
+
+    /**
+     * Одинаковая размерность у P и Q (max) и у соседних коэффициентов на каждом уровне — одинаковая глубина скобок.
+     * @param {NestedBigInt} P
+     * @param {NestedBigInt} Q
+     * @returns {[NestedBigInt, NestedBigInt]}
+     */
+    function normalizeNestedPairForInputs(P, Q) {
+      const D = Math.max(nestedDim(P), nestedDim(Q));
+      const P1 = liftPolynomialToDim(P, D);
+      const Q1 = liftPolynomialToDim(Q, D);
+      return [alignSiblingNestedDimensions(P1), alignSiblingNestedDimensions(Q1)];
+    }
+
+    /**
+     * Текст поля P/Q: дерево в порядке отображения (с учётом «старшие слева») и округлением n.
+     * @param {NestedBigInt} tree
+     * @param {number} nDec
+     */
+    function nestedTreeToInputFieldText(tree, nDec) {
+      const desc = /** @type {HTMLInputElement} */ (document.getElementById("descOrder")).checked;
+      const forUser = desc ? reverseNestedTree(tree) : tree;
+      return formatNestedBigForDisplay(forUser, nDec, nDec);
+    }
+
+    /**
+     * Поле композиции h показывается только для «плоского» ввода P и Q (без круглых скобок).
+     */
+    function updateCompHVisibility() {
+      const p1 = /** @type {HTMLTextAreaElement|null} */ (document.getElementById("p1"));
+      const p2 = /** @type {HTMLTextAreaElement|null} */ (document.getElementById("p2"));
+      const wrap = document.getElementById("compHWrap");
+      if (!wrap) return;
+      const hide = !!(p1 && p2 && (fieldUsesNesting(p1.value) || fieldUsesNesting(p2.value)));
+      wrap.style.display = hide ? "none" : "";
+    }
+
+    /**
+     * @param {string} term
+     * @param {number} nDec
+     * @returns {NestedBigInt}
+     */
+    function parseNestedTerm(term, nDec) {
+      const t = term.trim();
+      if (!t) throw new Error("Пустой фрагмент внутри скобок");
+      if (isFullyWrappedParens(t)) return parseNestedPolynomialString(t.slice(1, -1).trim(), nDec);
+      const norm = normalizeCoefficientToken(t);
+      const x = Number(norm);
+      if (!Number.isFinite(x)) throw new Error(`Не число: ${t}`);
+      const r = roundFixed(x, nDec);
+      return toScaledBigInt(r, nDec);
+    }
+
+    /**
+     * @param {string} inner — содержимое одного уровня скобок без внешних ( )
+     * @param {number} nDec
+     * @returns {NestedBigInt[]}
+     */
+    function parseNestedPolynomialString(inner, nDec) {
+      const parts = splitTopLevelSemicolons(inner);
+      if (!parts.length) throw new Error("Пусто внутри скобок");
+      return parts.map((p) => parseNestedTerm(p, nDec));
+    }
+
+    /**
+     * @param {string} s поле P или Q
+     * @param {number} nDec
+     * @returns {NestedBigInt}
+     */
+    function parseNestedField(s, nDec) {
+      const t = String(s).trim();
+      if (!t) throw new Error("Пустое поле");
+      if (isFullyWrappedParens(t)) return parseNestedPolynomialString(t.slice(1, -1).trim(), nDec);
+      return parseNestedPolynomialString(t, nDec);
+    }
+
+    /**
+     * Разрежённый многочлен: мономы x₁^e₁…xₖ^eₖ → bigint (масштаб 10^n).
+     * @param {NestedBigInt} p
+     * @param {number} D число переменных (размерность)
+     */
+    function nestedToSparseMap(p, D) {
+      const d = nestedDim(p);
+      /** @type {Map<string, bigint>} */
+      const out = new Map();
+      if (d === 0) {
+        const z = Array(D).fill(0);
+        out.set(z.join(","), /** @type {bigint} */ (p));
+        return out;
+      }
+      const arr = /** @type {NestedBigInt[]} */ (p);
+      for (let i = 0; i < arr.length; i++) {
+        const sub = nestedToSparseMap(arr[i], D);
+        for (const [ks, coeff] of sub) {
+          const e = ks.split(",").map(Number);
+          e[d - 1] += i;
+          const key = e.join(",");
+          out.set(key, (out.get(key) || 0n) + coeff);
+        }
+      }
+      return out;
+    }
+
+    function pruneSparse(m) {
+      const r = new Map();
+      for (const [k, v] of m) {
+        if (v !== 0n) r.set(k, v);
+      }
+      return r;
+    }
+
+    function addExpKeys(ka, kb, D) {
+      const a = ka.split(",").map(Number);
+      const b = kb.split(",").map(Number);
+      return a.map((x, i) => x + b[i]).join(",");
+    }
+
+    /**
+     * @param {Map<string, bigint>} A
+     * @param {Map<string, bigint>} B
+     * @param {number} nDec
+     */
+    function sparseMulScaled(A, B, nDec) {
+      const den = pow10(nDec);
+      /** @type {Map<string, bigint>} */
+      const acc = new Map();
+      const D = (() => {
+        let d = 0;
+        for (const k of A.keys()) d = Math.max(d, k.split(",").length);
+        for (const k of B.keys()) d = Math.max(d, k.split(",").length);
+        return Math.max(1, d);
+      })();
+      for (const [ka, ca] of A) {
+        for (const [kb, cb] of B) {
+          const kc = addExpKeys(ka, kb, D);
+          acc.set(kc, (acc.get(kc) || 0n) + ca * cb);
+        }
+      }
+      const out = new Map();
+      for (const [k, v] of acc) out.set(k, divRoundHalfUpSigned(v, den));
+      return pruneSparse(out);
+    }
+
+    /**
+     * @param {Map<string, bigint>} A
+     * @param {Map<string, bigint>} B
+     */
+    function sparseAddAligned(A, aSp, B, bSp) {
+      const sp = Math.max(aSp, bSp);
+      const scaleA = sp - aSp;
+      const scaleB = sp - bSp;
+      const mA = scaleA ? pow10(scaleA) : 1n;
+      const mB = scaleB ? pow10(scaleB) : 1n;
+      /** @type {Map<string, bigint>} */
+      const out = new Map();
+      for (const [k, v] of A) out.set(k, v * mA);
+      for (const [k, v] of B) out.set(k, (out.get(k) || 0n) + v * mB);
+      return { map: pruneSparse(out), scalePow: sp };
+    }
+
+    /**
+     * @param {Map<string, bigint>} M
+     * @param {number} exp
+     * @param {number} nDec
+     */
+    function padSparseToDim(m, D) {
+      /** @type {Map<string, bigint>} */
+      const out = new Map();
+      for (const [k, v] of m) {
+        const e = k.split(",").map(Number);
+        while (e.length < D) e.push(0);
+        out.set(e.join(","), v);
+      }
+      return out;
+    }
+
+    /**
+     * @param {{ map: Map<string, bigint>, nVars: number, scalePow: number }} a
+     * @param {{ map: Map<string, bigint>, nVars: number, scalePow: number }} b
+     * @param {number} nDec
+     */
+    function sparseMulObjMV(a, b, nDec) {
+      const D = Math.max(a.nVars, b.nVars);
+      const mp = sparseMulScaled(padSparseToDim(a.map, D), padSparseToDim(b.map, D), nDec);
+      return { map: mp, nVars: D, scalePow: a.scalePow + b.scalePow - nDec };
+    }
+
+    /**
+     * @param {{ map: Map<string, bigint>, nVars: number, scalePow: number }} a
+     * @param {{ map: Map<string, bigint>, nVars: number, scalePow: number }} b
+     */
+    function sparseAddObjMV(a, b) {
+      const D = Math.max(a.nVars, b.nVars);
+      const r = sparseAddAligned(padSparseToDim(a.map, D), a.scalePow, padSparseToDim(b.map, D), b.scalePow);
+      return { map: r.map, nVars: D, scalePow: r.scalePow };
+    }
+
+    /**
+     * @param {{ map: Map<string, bigint>, nVars: number, scalePow: number }} obj
+     * @param {number} exp
+     * @param {number} nDec
+     */
+    function sparsePowMV(obj, exp, nDec) {
+      if (!Number.isInteger(exp) || exp < 0) throw new Error("Степень ≥ 0");
+      const zkey = Array(obj.nVars).fill(0).join(",");
+      /** @type {{ map: Map<string, bigint>, nVars: number, scalePow: number }} */
+      let res = { map: new Map([[zkey, 1n]]), nVars: obj.nVars, scalePow: 0 };
+      let base = { map: new Map(obj.map), nVars: obj.nVars, scalePow: obj.scalePow };
+      let e = exp;
+      while (e > 0) {
+        if (e & 1) res = sparseMulObjMV(res, base, nDec);
+        e >>= 1;
+        if (e) base = sparseMulObjMV(base, base, nDec);
+      }
+      return res;
+    }
+
+    /**
+     * После {@link pruneSparse} пустая карта — нулевой многочлен; для стека RPN оставляем явный нулевой моном.
+     * @param {{ map: Map<string, bigint>, nVars: number, scalePow: number }} obj
+     */
+    function sparseWithZeroFallback(obj) {
+      const p = pruneSparse(obj.map);
+      const D = Math.max(1, obj.nVars);
+      if (p.size) return { map: p, nVars: obj.nVars, scalePow: obj.scalePow };
+      const z = Array(D).fill(0).join(",");
+      return { map: new Map([[z, 0n]]), nVars: obj.nVars, scalePow: obj.scalePow };
+    }
+
+    function sparseMaxPow(M, D) {
+      if (!M.size) return -1;
+      let m = 0;
+      for (const k of M.keys()) {
+        const e = k.split(",").map(Number);
+        m = Math.max(m, e[D - 1] || 0);
+      }
+      return m;
+    }
+
+    /**
+     * Обратное преобразование: разрежённая форма → вложенный массив bigint.
+     * @param {Map<string, bigint>} map
+     * @param {number} nVars
+     */
+    function sparseToNestedBigInt(map, nVars) {
+      if (!map.size) return 0n;
+      if (nVars === 0) {
+        const z = Array(0).join(",");
+        const v = map.get("") ?? map.get("0") ?? [...map.values()][0];
+        if (v === undefined) return 0n;
+        return v;
+      }
+      const maxPow = sparseMaxPow(map, nVars);
+      if (maxPow < 0) return 0n;
+      /** @type {NestedBigInt[]} */
+      const coeffs = [];
+      for (let i = 0; i <= maxPow; i++) {
+        /** @type {Map<string, bigint>} */
+        const sub = new Map();
+        for (const [k, v] of map) {
+          const e = k.split(",").map(Number);
+          if (e[nVars - 1] !== i) continue;
+          const pref = e.slice(0, nVars - 1).join(",");
+          sub.set(pref, (sub.get(pref) || 0n) + v);
+        }
+        coeffs.push(sparseToNestedBigInt(sub, nVars - 1));
+      }
+      while (coeffs.length > 1 && coeffs[coeffs.length - 1] === 0n) coeffs.pop();
+      if (coeffs.length === 1 && nestedDim(coeffs[0]) === 0) return /** @type {bigint} */ (coeffs[0]);
+      return coeffs;
+    }
+
+    /**
+     * @param {NestedBigInt} p
+     * @param {number} scalePow
+     * @param {number} nDec
+     */
+    function formatNestedBigForDisplay(p, scalePow, nDec) {
+      if (typeof p === "bigint") return scaledBigintToFixedN(p, scalePow, nDec);
+      const inner = p.map((c) => formatNestedBigForDisplay(c, scalePow, nDec)).join("; ");
+      return `(${inner})`;
+    }
+
+    /**
+     * Собирает все bigint-константы на «дне» деревьев.
+     * @param {NestedBigInt} p
+     * @returns {bigint[]}
+     */
+    function collectLeafBigints(p) {
+      if (typeof p === "bigint") return [p];
+      return p.flatMap(collectLeafBigints);
+    }
+
+    /**
+     * Упаковка дерева в целое по цепочке оснований B₁,… (Горнер на каждом уровне).
+     * @param {NestedBigInt} node
+     * @param {bigint[]} Bs
+     */
+    function packRecursive(node, Bs) {
+      if (typeof node === "bigint") return node;
+      const d = nestedDim(node);
+      const Btop = Bs[d - 1];
+      const arr = /** @type {NestedBigInt[]} */ (node);
+      let acc = 0n;
+      for (let i = arr.length - 1; i >= 0; i--) acc = acc * Btop + packRecursive(arr[i], Bs);
+      return acc;
+    }
+
+    /** Узлы дерева ровно с размерностью d (массив коэффициентов по x_d). */
+    function collectNodesOfDim(tree, d) {
+      /** @type {NestedBigInt[]} */
+      const out = [];
+      function w(node) {
+        if (typeof node === "bigint") return;
+        if (nestedDim(node) === d) out.push(node);
+        else for (const ch of /** @type {NestedBigInt[]} */ (node)) w(ch);
+      }
+      w(tree);
+      return out;
+    }
+
+    /**
+     * Цепочка B₁,…: на уровне d берём максимум модулей упакованных подкоэффициентов при уже выбранных B₁…B_{d-1}.
+     * @param {NestedBigInt[]} trees
+     */
+    function chooseNestedBlockBases(trees) {
+      const dim = Math.max(1, ...trees.map(nestedDim));
+      /** @type {bigint[]} */
+      const Bs = [];
+      for (let d = 1; d <= dim; d++) {
+        let M = 0n;
+        if (d === 1) {
+          for (const t of trees) {
+            for (const x of collectLeafBigints(t)) {
+              const u = absBig(x);
+              if (u > M) M = u;
+            }
+          }
+        } else {
+          for (const t of trees) {
+            for (const node of collectNodesOfDim(t, d)) {
+              for (const ch of /** @type {NestedBigInt[]} */ (node)) {
+                const v = absBig(packRecursive(ch, Bs));
+                if (v > M) M = v;
+              }
+            }
+          }
+        }
+        const L = M === 0n ? 1n : BigInt(M.toString(10).length);
+        Bs.push(10n ** L);
+      }
+      return Bs;
     }
 
     /**
@@ -464,8 +980,8 @@
       const el = document.getElementById("orderModeText");
       if (!el) return;
       el.textContent = desc
-        ? "коэффициенты: от старшей степени к младшей"
-        : "коэффициенты: от младшей степени к старшей";
+        ? "коэффициенты: от старшей степени к младшей (все уровни вложенности)"
+        : "коэффициенты: от младшей степени к старшей (все уровни вложенности)";
     }
 
     /**
@@ -1209,16 +1725,136 @@
       return r;
     }
 
-    /** Экземпляр графика Chart.js для коэффициентов; уничтожается в {@link resetOutputs}. */
-    let polyChart = null;
     /** Значение поля «макс. длина числа для столбика», если элемент ещё не в DOM (до первого показа блока P*Q). */
     let maxLongState = 180;
 
+    /** Подавляет запись в историю при программном восстановлении снимка. */
+    let historyRestoring = false;
+    /** Последние коэффициенты для графика (плоский режим); во вложенном режиме — null. */
+    let lastChartSnapshot = /** @type {{ p: number[], q: number[], r: number[] } | null} */ (null);
+
+    /** @type {{ form: object, p3: string, p1c: string, p2c: string, outHtml: string, chart: { p: number[], q: number[], r: number[] } | null }[]} */
+    let runHistoryStates = [];
+    let runHistoryIndex = -1;
+
+    const HISTORY_MAX_LS_KEY = "un_poly_calc_history_max";
+
+    function getHistoryMax() {
+      const el = /** @type {HTMLInputElement|null} */ (document.getElementById("historyMaxStates"));
+      const v = el ? parseInt(String(el.value), 10) : 10;
+      if (!Number.isFinite(v)) return 10;
+      return Math.max(1, Math.min(50, v));
+    }
+
+    function captureRunSnapshot() {
+      const p3el = /** @type {HTMLTextAreaElement|null} */ (document.getElementById("p3"));
+      const p1cel = /** @type {HTMLTextAreaElement|null} */ (document.getElementById("p1c"));
+      const p2cel = /** @type {HTMLTextAreaElement|null} */ (document.getElementById("p2c"));
+      const outEl = document.getElementById("out");
+      return {
+        form: getFormState(),
+        p3: p3el ? p3el.value : "",
+        p1c: p1cel ? p1cel.value : "",
+        p2c: p2cel ? p2cel.value : "",
+        outHtml: outEl ? outEl.innerHTML : "",
+        chart: lastChartSnapshot
+          ? {
+              p: lastChartSnapshot.p.slice(),
+              q: lastChartSnapshot.q.slice(),
+              r: lastChartSnapshot.r.slice(),
+            }
+          : null,
+      };
+    }
+
+    function syncRunHistoryNavUi() {
+      const back = /** @type {HTMLButtonElement|null} */ (document.getElementById("historyBack"));
+      const fwd = /** @type {HTMLButtonElement|null} */ (document.getElementById("historyFwd"));
+      if (back) back.disabled = runHistoryIndex <= 0;
+      if (fwd) fwd.disabled = runHistoryIndex < 0 || runHistoryIndex >= runHistoryStates.length - 1;
+    }
+
+    function pushRunHistoryAfterSuccess() {
+      if (historyRestoring) return;
+      if (runHistoryIndex < runHistoryStates.length - 1) {
+        runHistoryStates = runHistoryStates.slice(0, runHistoryIndex + 1);
+      }
+      runHistoryStates.push(captureRunSnapshot());
+      runHistoryIndex = runHistoryStates.length - 1;
+      const cap = getHistoryMax();
+      while (runHistoryStates.length > cap) {
+        runHistoryStates.shift();
+        runHistoryIndex--;
+      }
+      if (runHistoryStates.length === 0) runHistoryIndex = -1;
+      else if (runHistoryIndex < 0) runHistoryIndex = 0;
+      syncRunHistoryNavUi();
+    }
+
+    function trimHistoryToCap() {
+      const cap = getHistoryMax();
+      while (runHistoryStates.length > cap) {
+        runHistoryStates.shift();
+        if (runHistoryIndex > 0) runHistoryIndex--;
+        else runHistoryIndex = 0;
+      }
+      if (runHistoryStates.length === 0) runHistoryIndex = -1;
+      else if (runHistoryIndex >= runHistoryStates.length) runHistoryIndex = runHistoryStates.length - 1;
+      syncRunHistoryNavUi();
+    }
+
     /**
-     * Сбрасывает вычисленный вывод: очищает #out, поля результатов p3/p1c/p2c и уничтожает график.
+     * Восстанавливает форму и блок результатов из снимка (без повторного расчёта).
+     * @param {{ form: object, p3: string, p1c: string, p2c: string, outHtml: string, chart: { p: number[], q: number[], r: number[] } | null }} snap
+     */
+    function applyRunSnapshot(snap) {
+      historyRestoring = true;
+      try {
+        const s = snap.form;
+        if (!s || typeof s !== "object" || s.version !== 1) return;
+        /** @type {HTMLInputElement} */ (document.getElementById("descOrder")).checked = !!s.descOrder;
+        /** @type {HTMLInputElement} */ (document.getElementById("nDec")).value = String(s.nDec ?? "2");
+        /** @type {HTMLTextAreaElement} */ (document.getElementById("p1")).value = sanitizePolyInput(String(s.p1 ?? ""));
+        /** @type {HTMLTextAreaElement} */ (document.getElementById("p2")).value = sanitizePolyInput(String(s.p2 ?? ""));
+        /** @type {HTMLInputElement} */ (document.getElementById("compH")).value = sanitizePolyInput(String(s.compH ?? ""));
+        /** @type {HTMLInputElement} */ (document.getElementById("opExpr")).value = sanitizeOpExpr(String(s.opExpr ?? "P*Q"));
+        maxLongState = Math.max(30, Math.min(5000, parseInt(String(s.maxLong ?? "180"), 10) || 180));
+        const maxLongEl = /** @type {HTMLInputElement|null} */ (document.getElementById("maxLong"));
+        if (maxLongEl) maxLongEl.value = String(maxLongState);
+        updateOrderModeText();
+        updateOperationUi();
+
+        const p3el = /** @type {HTMLTextAreaElement|null} */ (document.getElementById("p3"));
+        const p1cel = /** @type {HTMLTextAreaElement|null} */ (document.getElementById("p1c"));
+        const p2cel = /** @type {HTMLTextAreaElement|null} */ (document.getElementById("p2c"));
+        if (p3el) p3el.value = snap.p3;
+        if (p1cel) p1cel.value = snap.p1c;
+        if (p2cel) p2cel.value = snap.p2c;
+
+        const outEl = document.getElementById("out");
+        if (outEl) outEl.innerHTML = snap.outHtml;
+
+        clearPolyChartCanvas();
+        if (snap.chart && snap.chart.p && snap.chart.q && snap.chart.r) {
+          updateCharts(snap.chart.p, snap.chart.q, snap.chart.r);
+        }
+
+        updateCompHVisibility();
+
+        const newMaxLongEl = /** @type {HTMLInputElement|null} */ (document.getElementById("maxLong"));
+        if (newMaxLongEl) newMaxLongEl.oninput = () => run();
+      } finally {
+        historyRestoring = false;
+        syncRunHistoryNavUi();
+      }
+    }
+
+    /**
+     * Сбрасывает вычисленный вывод: очищает #out, поля результатов p3/p1c/p2c и canvas графика.
      * Вызывается при изменении входных данных, чтобы не показывать устаревший результат.
      */
     function resetOutputs() {
+      updateCompHVisibility();
       const out = document.getElementById("out");
       if (out) out.innerHTML = "";
       const p3 = /** @type {HTMLTextAreaElement|null} */ (document.getElementById("p3"));
@@ -1227,10 +1863,6 @@
       const p2c = /** @type {HTMLTextAreaElement|null} */ (document.getElementById("p2c"));
       if (p1c) p1c.value = "";
       if (p2c) p2c.value = "";
-      if (polyChart) {
-        polyChart.destroy();
-        polyChart = null;
-      }
       clearPolyChartCanvas();
     }
 
@@ -1241,7 +1873,7 @@
      * @returns {string}
      */
     function sanitizePolyInput(s) {
-      return String(s).replace(/[^\d\s;.+-]/g, "");
+      return String(s).replace(/[^\d\s;.()+-]/g, "");
     }
 
     /**
@@ -1255,6 +1887,7 @@
         const v = el.value;
         const next = sanitizePolyInput(v);
         if (next !== v) el.value = next;
+        if (id === "p1" || id === "p2") updateCompHVisibility();
       });
     }
 
@@ -1367,7 +2000,7 @@
     }
 
     /**
-     * Очищает canvas графика коэффициентов (при сбросе или при переходе на Chart.js).
+     * Очищает canvas графика коэффициентов (перед новой отрисовкой или при сбросе).
      * @param {HTMLCanvasElement|null} [canvasEl]
      */
     function clearPolyChartCanvas(canvasEl) {
@@ -1380,8 +2013,7 @@
     }
 
     /**
-     * Линейный график трёх серий коэффициентов без Chart.js (чистый Canvas 2D).
-     * Используется, если библиотека Chart не загрузилась (нет файла vendor, ошибка сети и т.д.).
+     * Линейный график трёх серий коэффициентов на Canvas 2D (без внешних библиотек).
      * @param {number[]} pCoeffs
      * @param {number[]} qCoeffs
      * @param {number[]} rCoeffs
@@ -1557,111 +2189,201 @@
       ctx.fillStyle = "rgba(154,168,185,0.5)";
       ctx.font = "10px system-ui,Segoe UI,sans-serif";
       ctx.textAlign = "right";
-      ctx.fillText("Canvas (без Chart.js)", cssW - 6, cssH - 8);
+      ctx.fillText("Canvas 2D", cssW - 6, cssH - 8);
     }
 
     /**
-     * Обновляет график коэффициентов: при наличии Chart.js — как раньше; иначе рисует те же три серии на Canvas 2D ({@link drawCoeffChartCanvas2D}).
+     * Обновляет график коэффициентов на Canvas 2D ({@link drawCoeffChartCanvas2D}).
      * @param {number[]} pCoeffs
      * @param {number[]} qCoeffs
      * @param {number[]} rCoeffs
      */
     function updateCharts(pCoeffs, qCoeffs, rCoeffs) {
-      if (typeof Chart === "undefined") {
-        drawCoeffChartCanvas2D(pCoeffs, qCoeffs, rCoeffs);
-        return;
-      }
-
-      clearPolyChartCanvas();
-      const maxLen = Math.max(pCoeffs.length, qCoeffs.length, rCoeffs.length);
-      const xs = Array.from({ length: maxLen }, (_, i) => i);
-      const ysP = xs.map((i) => (i < pCoeffs.length ? pCoeffs[i] : null));
-      const ysQ = xs.map((i) => (i < qCoeffs.length ? qCoeffs[i] : null));
-      const ysPQ = xs.map((i) => (i < rCoeffs.length ? rCoeffs[i] : null));
-
-      const ctx = /** @type {HTMLCanvasElement} */ (document.getElementById("polyChart")).getContext("2d");
-      const data = {
-        labels: xs,
-        datasets: [
-          {
-            label: "P: коэффициенты",
-            data: ysP,
-            borderColor: "#5b9fd4",
-            backgroundColor: "rgba(0,0,0,0)",
-            borderWidth: 2,
-            pointRadius: 2,
-            pointHoverRadius: 4,
-            pointHitRadius: 8,
-            pointStyle: "circle",
-            tension: 0.15,
-          },
-          {
-            label: "Q: коэффициенты",
-            data: ysQ,
-            borderColor: "#6bcb77",
-            backgroundColor: "rgba(0,0,0,0)",
-            borderWidth: 2,
-            pointRadius: 2,
-            pointHoverRadius: 4,
-            pointHitRadius: 8,
-            pointStyle: "circle",
-            tension: 0.15,
-          },
-          {
-            label: "Результат: коэффициенты",
-            data: ysPQ,
-            borderColor: "#ff6b6b",
-            backgroundColor: "rgba(0,0,0,0)",
-            borderWidth: 2,
-            pointRadius: 2,
-            pointHoverRadius: 4,
-            pointHitRadius: 8,
-            pointStyle: "circle",
-            tension: 0.15,
-          },
-        ],
-      };
-      const options = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { labels: { color: "#e7ecf3" } },
-          title: { display: false },
-        },
-        scales: {
-          x: {
-            ticks: { color: "#9aa8b9", precision: 0 },
-            grid: { color: "rgba(154,168,185,0.12)" },
-            title: { display: true, text: "Индекс коэффициента", color: "#9aa8b9" },
-          },
-          y: { ticks: { color: "#9aa8b9" }, grid: { color: "rgba(154,168,185,0.12)" } },
-        },
-      };
-      if (polyChart) {
-        polyChart.data = data;
-        polyChart.options = options;
-        polyChart.update();
-        return;
-      }
-      // eslint-disable-next-line no-undef
-      polyChart = new Chart(ctx, { type: "line", data, options });
+      drawCoeffChartCanvas2D(pCoeffs, qCoeffs, rCoeffs);
     }
 
     /**
      * Главный расчёт по нажатию кнопки: читает n, выражение операции и поля P, Q, h; парсит коэффициенты;
      * при непустом h заменяет P,Q на P∘h, Q∘h в масштабе 10^n; вычисляет выражение в RPN на bigint;
      * заполняет поля результата, HTML-блок #out (пояснения, при P*Q — кодирование B и столбик), обновляет график.
+     * Если в P или Q есть круглые скобки (вложенный многомерный ввод), вызывается {@link runNestedMultivariate}.
      * Ошибки парсинга и вычисления выводятся в #out без исключения наружу.
      */
+    /**
+     * Расчёт при вложенном вводе P и/или Q: многомерные многочлены, умножение в разрежённой форме, столбик по упакованным целым.
+     */
+    function runNestedMultivariate() {
+      const out = document.getElementById("out");
+      const maxLongEl = /** @type {HTMLInputElement|null} */ (document.getElementById("maxLong"));
+      if (maxLongEl) maxLongState = parseInt(maxLongEl.value, 10) || maxLongState;
+      const maxLong = Math.max(30, Math.min(5000, maxLongState));
+      if (out) out.innerHTML = "";
+      const n = Math.max(0, Math.min(30, parseInt(document.getElementById("nDec").value, 10) || 0));
+      const opExpr = String((/** @type {HTMLInputElement} */ (document.getElementById("opExpr"))).value || "").trim();
+      const p3 = /** @type {HTMLTextAreaElement|null} */ (document.getElementById("p3"));
+      const p1cEl = /** @type {HTMLTextAreaElement|null} */ (document.getElementById("p1c"));
+      const p2cEl = /** @type {HTMLTextAreaElement|null} */ (document.getElementById("p2c"));
+      if (p1cEl) p1cEl.value = "";
+      if (p2cEl) p2cEl.value = "";
+
+      let Ptree;
+      let Qtree;
+      try {
+        const s1 = sanitizePolyInput(String((/** @type {HTMLTextAreaElement} */ (document.getElementById("p1"))).value || ""));
+        const s2 = sanitizePolyInput(String((/** @type {HTMLTextAreaElement} */ (document.getElementById("p2"))).value || ""));
+        Ptree = maybeReverseNestedInputOrder(parseNestedField(s1, n));
+        Qtree = maybeReverseNestedInputOrder(parseNestedField(s2, n));
+      } catch (e) {
+        const msg = e && typeof e === "object" && "message" in e ? String(/** @type {{ message: string }} */ (e).message) : String(e);
+        if (out) out.innerHTML = `<section><h2>Ошибка</h2><p>Не удалось разобрать вложенные коэффициенты.</p><pre>${msg}</pre></section>`;
+        if (p3) p3.value = "";
+        return;
+      }
+
+      const [Pn, Qn] = normalizeNestedPairForInputs(Ptree, Qtree);
+      const D = Math.max(nestedDim(Pn), nestedDim(Qn));
+      const S_P = pruneSparse(nestedToSparseMap(Pn, D));
+      const S_Q = pruneSparse(nestedToSparseMap(Qn, D));
+      const Pobj = sparseWithZeroFallback({ map: S_P, nVars: D, scalePow: n });
+      const Qobj = sparseWithZeroFallback({ map: S_Q, nVars: D, scalePow: n });
+
+      let result;
+      try {
+        const tokens = tokenizeExpr(opExpr);
+        const rpn = parseToRpn(tokens);
+        /** @type {{ map: Map<string, bigint>, nVars: number, scalePow: number }[]} */
+        const st = [];
+        for (const tok of rpn) {
+          if (tok === "P") st.push(sparseWithZeroFallback({ map: new Map(Pobj.map), nVars: Pobj.nVars, scalePow: Pobj.scalePow }));
+          else if (tok === "Q") st.push(sparseWithZeroFallback({ map: new Map(Qobj.map), nVars: Qobj.nVars, scalePow: Qobj.scalePow }));
+          else if (/^\d+$/.test(tok)) {
+            const zkey = Array(D).fill(0).join(",");
+            st.push(sparseWithZeroFallback({ map: new Map([[zkey, BigInt(tok)]]), nVars: D, scalePow: 0 }));
+          } else if (tok === "+" || tok === "*" || tok === "^") {
+            const b = st.pop();
+            const a = st.pop();
+            if (!a || !b) throw new Error("Неверное выражение");
+            if (tok === "+") st.push(sparseWithZeroFallback(sparseAddObjMV(a, b)));
+            else if (tok === "*") st.push(sparseWithZeroFallback(sparseMulObjMV(a, b, n)));
+            else {
+              const zkey = Array(b.nVars).fill(0).join(",");
+              if (b.scalePow !== 0 || b.map.size !== 1 || b.map.get(zkey) === undefined) {
+                throw new Error("Степень должна быть неотрицательным целым числом");
+              }
+              const exp = Number(b.map.get(zkey));
+              if (!Number.isSafeInteger(exp) || exp < 0) throw new Error("Степень должна быть целым числом ≥ 0");
+              st.push(sparseWithZeroFallback(sparsePowMV(a, exp, n)));
+            }
+          } else throw new Error("Неверное выражение");
+        }
+        if (st.length !== 1) throw new Error("Неверное выражение");
+        result = sparseWithZeroFallback(st[0]);
+      } catch (e) {
+        if (out) out.innerHTML = `<section><h2>Ошибка в операции</h2><pre>${String(e)}</pre></section>`;
+        if (p3) p3.value = "";
+        return;
+      }
+
+      const p1El = /** @type {HTMLTextAreaElement|null} */ (document.getElementById("p1"));
+      const p2El = /** @type {HTMLTextAreaElement|null} */ (document.getElementById("p2"));
+      if (p1El) p1El.value = nestedTreeToInputFieldText(Pn, n);
+      if (p2El) p2El.value = nestedTreeToInputFieldText(Qn, n);
+      updateCompHVisibility();
+
+      const resTree = sparseToNestedBigInt(result.map, result.nVars);
+      if (p3) p3.value = formatNestedBigForDisplay(resTree, result.scalePow, n);
+
+      /** @param {NestedBigInt} node @param {bigint[]} Bs */
+      function nestedCoeffsFitBases(node, Bs) {
+        if (typeof node === "bigint") return absBig(node) < Bs[0];
+        const d = nestedDim(node);
+        const arr = /** @type {NestedBigInt[]} */ (node);
+        for (const ch of arr) {
+          const pd = nestedDim(ch);
+          const packed = packRecursive(ch, Bs.slice(0, pd));
+          if (!(absBig(packed) < Bs[d - 1])) return false;
+          if (!nestedCoeffsFitBases(ch, Bs)) return false;
+        }
+        return true;
+      }
+
+      let html = "";
+      html += `<section><h2>Вложенный ввод (многомерный многочлен)</h2>`;
+      html += `<p class="note">Внутри <span class="mono">( … )</span> коэффициенты по <span class="mono">x₁</span>; внешняя обёртка — по <span class="mono">x₂</span> и т.д. Переключатель порядка коэффициентов действует на <strong>все</strong> уровни сразу. Поле композиции <span class="mono">h</span> скрыто и не используется при таком вводе. Поля <span class="mono">P</span> и <span class="mono">Q</span> после расчёта приводятся к одной размерности и к одинаковой глубине скобок у соседних коэффициентов на каждом уровне.</p>`;
+      html += `<p><span class="mono">P</span> = ${nestedTreeToInputFieldText(Pn, n)}</p>`;
+      html += `<p><span class="mono">Q</span> = ${nestedTreeToInputFieldText(Qn, n)}</p>`;
+      html += `<p><span class="mono">Операция</span>: ${opExpr || "—"}</p>`;
+      html += `</section>`;
+
+      html += `<section><h2>Результат</h2>`;
+      html += `<pre>${formatNestedBigForDisplay(resTree, result.scalePow, n)}</pre>`;
+      html += `</section>`;
+
+      html += `<section><h2>График</h2><p class="note">График коэффициентов строится только для одномерного ввода без скобок; здесь график не показан.</p></section>`;
+      clearPolyChartCanvas();
+
+      if (isPlainMultiplyPQ(opExpr)) {
+        const prodObj = sparseWithZeroFallback(sparseMulObjMV(Pobj, Qobj, n));
+        const Tprod = sparseToNestedBigInt(prodObj.map, prodObj.nVars);
+        const Bs = chooseNestedBlockBases([Pn, Qn, Tprod]);
+        const A = packRecursive(Pn, Bs);
+        const Cc = packRecursive(Qn, Bs);
+        const productInt = A * Cc;
+        const expanded = packRecursive(Tprod, Bs);
+        const same = expanded === productInt;
+        const checkDigits = nestedCoeffsFitBases(Pn, Bs) && nestedCoeffsFitBases(Qn, Bs) && nestedCoeffsFitBases(Tprod, Bs);
+
+        const Bdesc = Bs.map((B, i) => `<span class="mono">B<sub>${i + 1}</sub> = ${B.toString(10)}</span>`).join(", ");
+        html += `<section><h2>Кодирование в целые P(B₁,…) и Q(B₁,…) (только для P*Q)</h2>`;
+        html += `<p>Основания по уровням: ${Bdesc} (каждое <span class="mono">B<sub>k</sub> = 10<sup>L<sub>k</sub></sup></span> по длине максимума упакованных подкоэффициентов).</p>`;
+        html += `<p>Условие «разряды не наезжают» (рекурсивно): <strong>${checkDigits ? "да" : "нет"}</strong>.</p>`;
+        html += `<pre>P(упак.) = ${A.toString(10)}\nQ(упак.) = ${Cc.toString(10)}\nP·Q (упак. результата) = ${expanded.toString(10)}\nP(упак.)·Q(упак.) = ${productInt.toString(10)}</pre>`;
+        html += `<span class="badge ${same ? "ok" : "err"}">${same ? "Совпадает" : "Не совпадает"}</span> — проверка согласованности упаковки.`;
+        html += `</section>`;
+
+        html += `<details><summary style="cursor:pointer; color: #5b9fd4; font-weight: 600; margin: 0.25rem 0 0.5rem;">Окно умножения «столбиком» (|P(упак.)| и |Q(упак.)|)</summary><section style="margin-top:0.75rem;">`;
+        html += `<div class="row" style="margin:0 0 0.75rem;"><div style="max-width: 22rem;"><label for="maxLong">Макс. длина числа для столбика (символов)</label><input type="number" id="maxLong" min="30" max="5000" value="${maxLong}" /></div></div>`;
+        const ua = A < 0n ? (-A).toString(10) : A.toString(10);
+        const ub = Cc < 0n ? (-Cc).toString(10) : Cc.toString(10);
+        const longMul = renderLongMulTable(ua, ub, maxLong);
+        html += longMul.html;
+        const absProd = productInt < 0n ? -productInt : productInt;
+        const lmOkText =
+          longMul.sum != null && longMul.sum !== ""
+            ? (BigInt(longMul.sum) === absProd ? "совпадает" : "расходится")
+            : "не проверялось (столбик не считался)";
+        html += `<p class="note">Сравнение с <span class="mono">|P(B₁,…)·Q(B₁,…)|</span>: <strong>${lmOkText}</strong>.</p>`;
+        html += `<pre>|P·Q| = ${absProd.toString(10)}</pre>`;
+        html += `</section></details>`;
+      } else {
+        html += `<section><h2>Длинная арифметика</h2><p class="note">Показывается только для операции <span class="mono">P*Q</span> (или <span class="mono">Q*P</span>).</p></section>`;
+      }
+
+      if (out) out.innerHTML = html;
+      const newMaxLongEl = /** @type {HTMLInputElement|null} */ (document.getElementById("maxLong"));
+      if (newMaxLongEl) newMaxLongEl.oninput = () => run();
+      lastChartSnapshot = null;
+      pushRunHistoryAfterSuccess();
+    }
+
     function run() {
       const out = document.getElementById("out");
       const maxLongEl = /** @type {HTMLInputElement|null} */ (document.getElementById("maxLong"));
       if (maxLongEl) maxLongState = parseInt(maxLongEl.value, 10) || maxLongState;
       const maxLong = Math.max(30, Math.min(5000, maxLongState));
+      lastChartSnapshot = null;
       out.innerHTML = "";
       const n = Math.max(0, Math.min(30, parseInt(document.getElementById("nDec").value, 10) || 0));
       const opExpr = String((/** @type {HTMLInputElement} */ (document.getElementById("opExpr"))).value || "").trim();
       const compHText = String((/** @type {HTMLInputElement} */ (document.getElementById("compH"))).value || "").trim();
+
+      updateCompHVisibility();
+      const rawP1 = String((/** @type {HTMLTextAreaElement} */ (document.getElementById("p1"))).value || "");
+      const rawP2 = String((/** @type {HTMLTextAreaElement} */ (document.getElementById("p2"))).value || "");
+      if (fieldUsesNesting(rawP1) || fieldUsesNesting(rawP2)) {
+        runNestedMultivariate();
+        return;
+      }
 
       let raw1, raw2;
       try {
@@ -1821,12 +2543,14 @@
 
       out.innerHTML = html;
       const newMaxLongEl = /** @type {HTMLInputElement|null} */ (document.getElementById("maxLong"));
-      if (newMaxLongEl) {
-        newMaxLongEl.addEventListener("input", () => run());
-      }
-
-      // графики обновляем после расчёта; при отсутствии Chart.js — отрисовка на Canvas 2D
+      if (newMaxLongEl) newMaxLongEl.oninput = () => run();
       updateCharts(pRoundedCoeffs, qRoundedCoeffs, resultRounded);
+      lastChartSnapshot = {
+        p: pRoundedCoeffs.slice(),
+        q: qRoundedCoeffs.slice(),
+        r: resultRounded.slice(),
+      };
+      pushRunHistoryAfterSuccess();
     }
 
     document.getElementById("btn").addEventListener("click", run);
@@ -1872,6 +2596,47 @@
 
     updateOrderModeText();
     updateOperationUi();
+    updateCompHVisibility();
+
+    const historyMaxEl = /** @type {HTMLInputElement|null} */ (document.getElementById("historyMaxStates"));
+    if (historyMaxEl) {
+      try {
+        const ls = localStorage.getItem(HISTORY_MAX_LS_KEY);
+        if (ls != null) {
+          const n = parseInt(ls, 10);
+          if (Number.isFinite(n)) historyMaxEl.value = String(Math.max(1, Math.min(50, n)));
+        }
+      } catch {
+        /* localStorage недоступен */
+      }
+      const onHistoryCapChange = () => {
+        trimHistoryToCap();
+        try {
+          localStorage.setItem(HISTORY_MAX_LS_KEY, String(getHistoryMax()));
+        } catch {
+          /* ignore */
+        }
+      };
+      historyMaxEl.addEventListener("change", onHistoryCapChange);
+      historyMaxEl.addEventListener("input", onHistoryCapChange);
+    }
+    const historyBackBtn = document.getElementById("historyBack");
+    const historyFwdBtn = document.getElementById("historyFwd");
+    if (historyBackBtn) {
+      historyBackBtn.addEventListener("click", () => {
+        if (runHistoryIndex <= 0) return;
+        runHistoryIndex -= 1;
+        applyRunSnapshot(runHistoryStates[runHistoryIndex]);
+      });
+    }
+    if (historyFwdBtn) {
+      historyFwdBtn.addEventListener("click", () => {
+        if (runHistoryIndex < 0 || runHistoryIndex >= runHistoryStates.length - 1) return;
+        runHistoryIndex += 1;
+        applyRunSnapshot(runHistoryStates[runHistoryIndex]);
+      });
+    }
+    syncRunHistoryNavUi();
 
     bindPolyInputSanitizer("p1");
     bindPolyInputSanitizer("p2");
