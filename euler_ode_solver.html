@@ -366,6 +366,13 @@
     .method-detail-stack .method-detail-note {
       color: #57606a;
     }
+    .method-detail-stack .method-detail-mono-explain {
+      font-family: ui-monospace, Consolas, "Cascadia Mono", monospace;
+      background: #ffffff;
+      border: 1px solid #d0d7de;
+      border-radius: 8px;
+      padding: 0.55rem 0.65rem;
+    }
     details.parse-help {
       margin-top: 1rem;
       padding: 0.75rem 1rem;
@@ -1046,6 +1053,49 @@
         ]
       };
 
+      /**
+       * Подробное «учебное» описание для ряда с произвольной подписью (нет отдельной статьи в METHOD_DETAIL_ALGORITHMS).
+       * Дополняется ниже таблицей разбора первого шага и пояснением умножения «столбиком», если доступны f и два узла.
+       * @type {string[]}
+       */
+      var METHOD_DETAIL_ALGORITHM_FALLBACK = [
+        "Этот ряд на графике имеет подпись, для которой не заведена отдельная короткая статья на странице; ниже — общая логика, как из столбцов таблицы «Расчёт на сетке» восстановить смысл вычислений в духе школьного и вузовского курса.",
+        "Исходная постановка: ищется функция y(x) на отрезке от x₀ до x₁, удовлетворяющая дифференциальному уравнению первого порядка y′(x) = f(x, y(x)) и начальному условию y(x₀) = y₀. Число f(x, y) — «наклон поля направлений» в точке (x, y): если бы решение проходило через эту точку, мгновенная скорость изменения y равнялась бы f(x, y).",
+        "Компьютер не решает уравнение «в символах»: он строит таблицу приближённых значений y в выбранных узлах x₀, x₁, x₂, … На странице узлы идут в том порядке, в каком интегратор движется к x₁ (вперёд или назад — знак шага уже учтён в Δxₙ).",
+        "Столбец Δxₙ — длина шага по x от предыдущего узла к текущему: Δxₙ = xₙ − xₙ₋₁ (для n = 0 в таблице стоит «—», потому что «предыдущего» узла ещё нет). Последний шаг на отрезке часто короче |h| из формы: так сделано специально, чтобы последняя точка сетки совпала с x₁, а не «перелетела» через конец.",
+        "Столбец yₙ — значение приближённого решения в узле xₙ. Переход от (xₙ₋₁, yₙ₋₁) к (xₙ, yₙ) у разных методов устроен по-разному, но у большинства явных одношаговых схем идея одна: сначала оценить наклон f в одной или нескольких пробных точках на отрезке длины Δx, затем умножить «типичный» наклон на длину шага и прибавить к yₙ₋₁.",
+        "Простейший ориентир — явный метод Эйлера: приращение за шаг считают как Δy ≈ Δx · f(xₙ₋₁, yₙ₋₁), то есть yₙ ≈ yₙ₋₁ + Δx · f(xₙ₋₁, yₙ₋₁). Здесь как раз появляется произведение двух чисел: длина шага по x и значение правой части в левой точке шага. Если ваш метод на графике совпадает с явным Эйлером, строки таблицы должны согласоваться с этой формулой с точностью до округления.",
+        "Умножение «столбиком» (как в арифметике): чтобы вручную проверить произведение Δx · f(xₙ₋₁, yₙ₋₁), запишите множители друг под другом по разрядам, выполните поразрядное умножение нижнего на каждую цифру верхнего, сдвигая частичные произведения, сложите столбиком с переносом десятков; не забудьте знак минус у отрицательных множителей и положение десятичной запятой (у произведения — сумма чисел знаков после запятой у множителей). В программе то же значение даёт оператор * в JavaScript; столбиком удобно сверять первые один-два шага на грубой сетке.",
+        "Сложение приращения к y: после того как вы получили Δy = Δx · f (или более сложную комбинацию стадий в RK), новое значение yₙ = yₙ₋₁ + Δy — это обычное сложение десятичных дробей столбиком: выравниваете запятые, складываете разряд за разрядом с переносом. На жёстких задачах Δy может быть большим по модулю — тогда важна устойчивость схемы, а не только арифметика.",
+        "Если в таблице есть столбцы «y этал.» и «δₙ», эталон — это значение вашей формулы y(x) в том же xₙ; отклонение δₙ = yₙ (численное) − y эталона показывает, насколько узел численной траектории отличается от выбранной вами аналитической кривой. Норма ‖δ‖₂ и RMSE внизу — агрегаты по всем узлам, где эталон удалось вычислить.",
+        "Ниже основной таблицы (если доступны f и хотя бы два узла) выводится отдельная мини-таблица «Разбор первого шага»: там те же числа, что в строках n = 0 и n = 1, плюс явно выписанные f(x₀, y₀), произведение Δx·f и сравнение с фактическим y₁ — так можно убедиться, что шаг соответствует явному Эйлеру или увидеть расхождение для другого метода."
+      ];
+
+      function methodDetailUsesFallback(label) {
+        return !Object.prototype.hasOwnProperty.call(METHOD_DETAIL_ALGORITHMS, label);
+      }
+
+      /**
+       * Текстовое пояснение к ручной проверке произведения Δx·f «столбиком» и сложению с y₀.
+       */
+      function buildColumnMultiplyExplanation(dx, f0, y0, y1pred) {
+        if (!isFinite(dx) || !isFinite(f0)) {
+          return (
+            "Проверка «столбиком»: перепишите Δx и f(x₀,y₀) на бумаге, выровняйте запятые, выполните умножение поразрядно со сдвигом частичных произведений, затем сложите. Учтите знаки множителей. В программе то же значение даёт выражение Δx * f(x₀,y₀) в JavaScript."
+          );
+        }
+        var prod = dx * f0;
+        var lines = [
+          "Умножение Δx · f(x₀, y₀) «столбиком» (как в школе):",
+          "  • Запишите первый множитель A = Δx = " + String(dx) + " и второй B = f(x₀,y₀) = " + String(f0) + " столбиком, запятая под запятой.",
+          "  • Разбейте B на разряды; для каждой цифры B умножьте A, сдвиньте частичное произведение на позицию разряда, сложите все части с переносом.",
+          "  • Знак результата: минус, если отрицателен ровно один из A, B; плюс, если оба одного знака или оба положительны.",
+          "  • Контроль в одну строку на калькуляторе: " + fmtTableNum(dx) + " * " + fmtTableNum(f0) + " = " + fmtTableNum(prod) + " — должно совпасть с ячейкой «Δx·f» в таблице разбора.",
+          "  • Затем сложение y₀ + (Δx·f) столбиком: y₀ = " + fmtTableNum(y0) + ", прибавляете " + fmtTableNum(prod) + ", получаете ожидаемое y₁ для явного Эйлера ≈ " + fmtTableNum(y1pred) + "; сравните с y₁ из основной таблицы."
+        ];
+        return lines.join("\n");
+      }
+
       function escapeHtml(s) {
         return String(s || "")
           .replace(/&/g, "&amp;")
@@ -1182,6 +1232,81 @@
             "Равномерная выборка на [x₀, x₁] для графика эталона; всего узлов: " + nPts + " (не шаг интегратора h).";
           frag.appendChild(note);
         }
+        if (methodDetailUsesFallback(label)) {
+          if (fFn && nPts >= 2) {
+            var sx0 = xs[0];
+            var sy0 = ys[0];
+            var sx1 = xs[1];
+            var sy1 = ys[1];
+            var sdx = sx1 - sx0;
+            var sf0 = NaN;
+            try {
+              sf0 = fFn(sx0, sy0);
+            } catch (eSF) {
+              sf0 = NaN;
+            }
+            var h4 = document.createElement("h4");
+            h4.className = "method-detail-subtitle";
+            h4.style.marginTop = "1rem";
+            h4.textContent = "Разбор первого шага по сетке (n = 0 → 1)";
+            frag.appendChild(h4);
+            var it = document.createElement("table");
+            it.className = "method-detail-table";
+            var ihead = document.createElement("thead");
+            var ihr = document.createElement("tr");
+            ["Величина", "Значение", "Пояснение"].forEach(function (ht) {
+              var thc = document.createElement("th");
+              thc.textContent = ht;
+              ihr.appendChild(thc);
+            });
+            ihead.appendChild(ihr);
+            it.appendChild(ihead);
+            var ib = document.createElement("tbody");
+            function addIRow(sym, val, expl) {
+              var r = document.createElement("tr");
+              [sym, val, expl].forEach(function (cell) {
+                var d = document.createElement("td");
+                d.textContent = cell;
+                r.appendChild(d);
+              });
+              ib.appendChild(r);
+            }
+            addIRow("x₀", fmtTableNum(sx0), "Строка n = 0, столбец xₙ");
+            addIRow("y₀", fmtTableNum(sy0), "Строка n = 0, столбец yₙ");
+            addIRow("x₁", fmtTableNum(sx1), "Строка n = 1");
+            addIRow("y₁", fmtTableNum(sy1), "Строка n = 1");
+            addIRow("Δx = x₁ − x₀", fmtTableNum(sdx), "То же, что Δxₙ в строке n = 1 основной таблицы");
+            if (isFinite(sf0)) {
+              var prod = sdx * sf0;
+              var pred = sy0 + prod;
+              addIRow("f(x₀, y₀)", fmtTableNum(sf0), "Правая часть y′ = f в левой точке шага");
+              addIRow("Δx · f(x₀, y₀)", fmtTableNum(prod), "Приращение Δy для явного Эйлера на этом шаге");
+              addIRow("y₀ + Δx·f", fmtTableNum(pred), "Ожидаемое y₁ по формуле явного Эйлера");
+              addIRow("y₁ − (y₀ + Δx·f)", fmtTableNum(sy1 - pred), "Невязка: для явного Эйлера ≈ 0 с учётом округления");
+            } else {
+              addIRow("f(x₀, y₀)", "—", "Не вычислилось: проверьте область определения и формулу f");
+            }
+            it.appendChild(ib);
+            frag.appendChild(it);
+            if (isFinite(sf0)) {
+              var pre = document.createElement("pre");
+              pre.className = "method-detail-mono-explain";
+              pre.style.marginTop = "0.55rem";
+              pre.style.fontSize = "0.75rem";
+              pre.style.whiteSpace = "pre-wrap";
+              pre.style.lineHeight = "1.45";
+              pre.textContent = buildColumnMultiplyExplanation(sdx, sf0, sy0, sy0 + sdx * sf0);
+              frag.appendChild(pre);
+            }
+          } else {
+            var umsg = document.createElement("p");
+            umsg.className = "method-detail-note";
+            umsg.style.marginTop = "0.85rem";
+            umsg.textContent =
+              "Для мини-таблицы пошагового разбора нужны скомпилированная f(x, y) и не менее двух узлов в сетке этого ряда.";
+            frag.appendChild(umsg);
+          }
+        }
         return frag;
       }
 
@@ -1259,17 +1384,11 @@
         }
         metaEl.innerHTML = metaHtml;
         var paras = METHOD_DETAIL_ALGORITHMS[label];
-        if (paras && paras.length) {
-          for (var pi = 0; pi < paras.length; pi++) {
-            var pr = document.createElement("p");
-            pr.textContent = paras[pi];
-            algoEl.appendChild(pr);
-          }
-        } else {
-          var px = document.createElement("p");
-          px.textContent =
-            "Отдельное развёрнутое описание для этого ряда не задано; краткая справка — во всплывающей подсказке у названия метода.";
-          algoEl.appendChild(px);
+        if (!paras || !paras.length) paras = METHOD_DETAIL_ALGORITHM_FALLBACK;
+        for (var pi = 0; pi < paras.length; pi++) {
+          var pr = document.createElement("p");
+          pr.textContent = paras[pi];
+          algoEl.appendChild(pr);
         }
         tableWrap.appendChild(buildMethodDetailTable(label, LRC.trajectories[label]));
         stack.appendChild(pane);
