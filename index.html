@@ -223,6 +223,30 @@
       border-color: rgba(91, 159, 212, 0.45);
     }
 
+    /** Над полями P / Q / результат: блоки цифр с ведущими нулями (разрядная сетка B = 10^L). */
+    .long-arith-strip {
+      margin-bottom: 0.5rem;
+      padding: 0.45rem 0.6rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: rgba(13, 17, 23, 0.72);
+    }
+    .long-arith-strip-cap {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 0.35rem;
+      line-height: 1.35;
+    }
+    .long-arith-strip pre.long-arith-strip-pre {
+      margin: 0;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      font-size: 0.78rem;
+      padding: 0.45rem 0.5rem;
+      max-height: 7rem;
+    }
+
     .charts {
       margin-top: 0;
       max-width: none;
@@ -313,7 +337,7 @@
 <body>
   <header class="page-header">
     <div class="page-header-main">
-      <h1>Умножение многочленов и то же самое через «длинное» целое <span class="form-version">v8</span></h1>
+      <h1>Умножение многочленов и то же самое через «длинное» целое <span class="form-version">v9</span></h1>
       <p class="lead">
         Коэффициенты задаются от младшей степени к старшей: <span class="mono">a₀; a₁; a₂ …</span> (между ними — только <span class="mono">;</span>, в числе — только цифры и точка) для
         <span class="mono">a₀ + a₁x + a₂x² + …</span>.
@@ -334,7 +358,7 @@
 
   <div class="main-stack">
     <fieldset>
-      <legend>Входные данные <span class="form-version">v8</span></legend>
+      <legend>Входные данные <span class="form-version">v9</span></legend>
       <div class="row">
         <div style="min-width: 16rem;">
           <label class="switch">
@@ -350,6 +374,10 @@
       </div>
       <div class="row">
         <div>
+          <div id="longArithPWrap" class="long-arith-strip" hidden>
+            <div id="longArithPCap" class="long-arith-strip-cap"></div>
+            <pre class="long-arith-strip-pre mono" id="longArithPText"></pre>
+          </div>
           <label for="p1">Коэффициенты P: <span class="mono">…;…</span> или вложенно <span class="mono">(…;…)</span> по x₁, x₂, …</label>
           <textarea id="p1" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="1.5; -2; 0.25">1; 2; 1</textarea>
           <div class="poly-io-btns" role="group" aria-label="Буфер обмена: P(x)">
@@ -358,6 +386,10 @@
           </div>
         </div>
         <div>
+          <div id="longArithQWrap" class="long-arith-strip" hidden>
+            <div id="longArithQCap" class="long-arith-strip-cap"></div>
+            <pre class="long-arith-strip-pre mono" id="longArithQText"></pre>
+          </div>
           <label for="p2">Коэффициенты Q: <span class="mono">…;…</span> или вложенно <span class="mono">(…;…)</span> по x₁, x₂, …</label>
           <textarea id="p2" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="1; -1">1; -1</textarea>
           <div class="poly-io-btns" role="group" aria-label="Буфер обмена: Q(x)">
@@ -411,6 +443,10 @@
       <button type="button" id="btn">Выполнить операцию: P*Q</button>
       <div class="row" style="margin-top: 0.75rem;">
         <div>
+          <div id="longArithRWrap" class="long-arith-strip" hidden>
+            <div id="longArithRCap" class="long-arith-strip-cap"></div>
+            <pre class="long-arith-strip-pre mono" id="longArithRText"></pre>
+          </div>
           <label for="p3">Коэффициенты результата (в том же формате)</label>
           <textarea id="p3" readonly placeholder="Нажмите «Выполнить операцию…», чтобы увидеть коэффициенты результата"></textarea>
           <div class="poly-io-btns" role="group" aria-label="Копировать результат">
@@ -1791,8 +1827,10 @@
     let historyRestoring = false;
     /** Последние коэффициенты для графика (плоский режим); во вложенном режиме — null. */
     let lastChartSnapshot = /** @type {{ p: number[], q: number[], r: number[] } | null} */ (null);
+    /** Последняя строка блоков P/Q/результат для полей формы и истории (плоский режим). */
+    let lastLongArithSnapshot = /** @type {{ L: string, blockP: string, blockQ: string, blockR: string } | null} */ (null);
 
-    /** @type {{ form: object, p3: string, p1c: string, p2c: string, outHtml: string, chart: { p: number[], q: number[], r: number[] } | null }[]} */
+    /** @type {{ form: object, p3: string, p1c: string, p2c: string, outHtml: string, chart: { p: number[], q: number[], r: number[] } | null, longArith: { L: string, blockP: string, blockQ: string, blockR: string } | null }[]} */
     let runHistoryStates = [];
     let runHistoryIndex = -1;
 
@@ -1823,6 +1861,14 @@
               p: lastChartSnapshot.p.slice(),
               q: lastChartSnapshot.q.slice(),
               r: lastChartSnapshot.r.slice(),
+            }
+          : null,
+        longArith: lastLongArithSnapshot
+          ? {
+              L: lastLongArithSnapshot.L,
+              blockP: lastLongArithSnapshot.blockP,
+              blockQ: lastLongArithSnapshot.blockQ,
+              blockR: lastLongArithSnapshot.blockR,
             }
           : null,
       };
@@ -1866,7 +1912,7 @@
 
     /**
      * Восстанавливает форму и блок результатов из снимка (без повторного расчёта).
-     * @param {{ form: object, p3: string, p1c: string, p2c: string, outHtml: string, chart: { p: number[], q: number[], r: number[] } | null }} snap
+     * @param {{ form: object, p3: string, p1c: string, p2c: string, outHtml: string, chart: { p: number[], q: number[], r: number[] } | null, longArith: { L: string, blockP: string, blockQ: string, blockR: string } | null }} snap
      */
     function applyRunSnapshot(snap) {
       historyRestoring = true;
@@ -1902,6 +1948,18 @@
           setPolyChartsBlockVisible(false);
         }
 
+        if (snap.longArith && snap.longArith.L) {
+          lastLongArithSnapshot = {
+            L: snap.longArith.L,
+            blockP: snap.longArith.blockP,
+            blockQ: snap.longArith.blockQ,
+            blockR: snap.longArith.blockR,
+          };
+          paintLongArithStripsUi(lastLongArithSnapshot);
+        } else {
+          clearLongArithStrips();
+        }
+
         updateCompHVisibility();
 
         const newMaxLongEl = /** @type {HTMLInputElement|null} */ (document.getElementById("maxLong"));
@@ -1913,7 +1971,7 @@
     }
 
     /**
-     * Сбрасывает вычисленный вывод: очищает #out, поля результатов p3/p1c/p2c, canvas графика и скрывает блок графика.
+     * Сбрасывает вычисленный вывод: очищает #out, поля результатов p3/p1c/p2c, canvas графика, полосы блоков цифр над P/Q/результатом и скрывает блок графика.
      * Вызывается при изменении входных данных, чтобы не показывать устаревший результат.
      */
     function resetOutputs() {
@@ -1928,6 +1986,7 @@
       if (p1c) p1c.value = "";
       if (p2c) p2c.value = "";
       clearPolyChartCanvas();
+      clearLongArithStrips();
     }
 
     /**
@@ -2070,6 +2129,63 @@
     function setPolyChartsBlockVisible(visible) {
       const el = document.getElementById("charts");
       if (el) el.hidden = !visible;
+    }
+
+    /**
+     * Скрывает полосы «блоки цифр» над P, Q и результатом и сбрасывает снимок для истории.
+     */
+    function clearLongArithStrips() {
+      lastLongArithSnapshot = null;
+      const ids = ["longArithPWrap", "longArithQWrap", "longArithRWrap", "longArithPCap", "longArithQCap", "longArithRCap", "longArithPText", "longArithQText", "longArithRText"];
+      for (const id of ids) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        if (id.endsWith("Wrap")) el.hidden = true;
+        else el.textContent = "";
+      }
+    }
+
+    /**
+     * Заполняет DOM полос разрядной сетки (без изменения lastLongArithSnapshot — вызывающий задаёт).
+     * @param {{ L: string, blockP: string, blockQ: string, blockR: string }} data
+     */
+    function paintLongArithStripsUi(data) {
+      const Ls = data.L;
+      const capBase = `B = 10^${Ls}; в каждом блоке ровно ${Ls} десятичных цифр на коэффициент (пробел между блоками, ведущие нули — как в длинной записи).`;
+      const capP = document.getElementById("longArithPCap");
+      const capQ = document.getElementById("longArithQCap");
+      const capR = document.getElementById("longArithRCap");
+      const preP = document.getElementById("longArithPText");
+      const preQ = document.getElementById("longArithQText");
+      const preR = document.getElementById("longArithRText");
+      const wrapP = document.getElementById("longArithPWrap");
+      const wrapQ = document.getElementById("longArithQWrap");
+      const wrapR = document.getElementById("longArithRWrap");
+      if (capP) capP.textContent = "P — " + capBase;
+      if (capQ) capQ.textContent = "Q — " + capBase;
+      if (capR) capR.textContent = "Результат операции — " + capBase;
+      if (preP) preP.textContent = data.blockP;
+      if (preQ) preQ.textContent = data.blockQ;
+      if (preR) preR.textContent = data.blockR;
+      if (wrapP) wrapP.hidden = false;
+      if (wrapQ) wrapQ.hidden = false;
+      if (wrapR) wrapR.hidden = false;
+    }
+
+    /**
+     * Строит разбиение коэффициентов по блокам (как в разделе длинной арифметики) и показывает над полями P, Q, p3.
+     * @param {bigint[]} cP
+     * @param {bigint[]} cQ
+     * @param {bigint[]} cR
+     */
+    function fillLongArithStripsFromBigintCoeffs(cP, cQ, cR) {
+      const L = minDigitLengthPow10(cP, cQ, cR);
+      const Ls = L.toString(10);
+      const blockP = paddedBlocksString(cP, L);
+      const blockQ = paddedBlocksString(cQ, L);
+      const blockR = paddedBlocksString(cR, L);
+      lastLongArithSnapshot = { L: Ls, blockP, blockQ, blockR };
+      paintLongArithStripsUi(lastLongArithSnapshot);
     }
 
     /**
@@ -2463,6 +2579,7 @@
       lastChartSnapshot = null;
       out.innerHTML = "";
       setPolyChartsBlockVisible(false);
+      clearLongArithStrips();
       const n = Math.max(0, Math.min(30, parseInt(document.getElementById("nDec").value, 10) || 0));
       const opExpr = String((/** @type {HTMLInputElement} */ (document.getElementById("opExpr"))).value || "").trim();
       const compHText = String((/** @type {HTMLInputElement} */ (document.getElementById("compH"))).value || "").trim();
@@ -2634,6 +2751,7 @@
       out.innerHTML = html;
       const newMaxLongEl = /** @type {HTMLInputElement|null} */ (document.getElementById("maxLong"));
       if (newMaxLongEl) newMaxLongEl.oninput = () => run();
+      fillLongArithStripsFromBigintCoeffs(P.coeffs, Q.coeffs, result.coeffs);
       updateCharts(pRoundedCoeffs, qRoundedCoeffs, resultRounded);
       lastChartSnapshot = {
         p: pRoundedCoeffs.slice(),
