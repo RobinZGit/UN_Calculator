@@ -276,6 +276,24 @@
       opacity: 0.45;
       filter: grayscale(0.35);
     }
+    /* Относительный href — корректно на GitHub Pages (корень репозитория). */
+    .page-ode-link {
+      width: auto;
+      margin-top: 0;
+      padding: 0.45rem 0.75rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #0d1117;
+      color: var(--accent);
+      font-weight: 600;
+      font-size: 0.88rem;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .page-ode-link:hover {
+      filter: brightness(1.1);
+      text-decoration: underline;
+    }
     .nav-history-size {
       display: inline-flex;
       align-items: center;
@@ -295,7 +313,7 @@
 <body>
   <header class="page-header">
     <div class="page-header-main">
-      <h1>Умножение многочленов и то же самое через «длинное» целое <span class="form-version">v7</span></h1>
+      <h1>Умножение многочленов и то же самое через «длинное» целое <span class="form-version">v8</span></h1>
       <p class="lead">
         Коэффициенты задаются от младшей степени к старшей: <span class="mono">a₀; a₁; a₂ …</span> (между ними — только <span class="mono">;</span>, в числе — только цифры и точка) для
         <span class="mono">a₀ + a₁x + a₂x² + …</span>.
@@ -304,6 +322,7 @@
       </p>
     </div>
     <div class="page-header-nav" aria-label="История успешных расчётов">
+      <a class="page-ode-link" href="euler_ode_solver.html">ДУ: метод Эйлера</a>
       <label class="nav-history-size" for="historyMaxStates" title="Сколько последних успешных расчётов хранить">
         <span>Шагов</span>
         <input type="number" id="historyMaxStates" min="1" max="500" value="100" inputmode="numeric" />
@@ -315,7 +334,7 @@
 
   <div class="main-stack">
     <fieldset>
-      <legend>Входные данные <span class="form-version">v7</span></legend>
+      <legend>Входные данные <span class="form-version">v8</span></legend>
       <div class="row">
         <div style="min-width: 16rem;">
           <label class="switch">

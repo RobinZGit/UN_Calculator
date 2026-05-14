@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Метод Эйлера: явный и неявный</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a2332;
+      --text: #e6edf3;
+      --muted: #8b9cb3;
+      --accent: #58a6ff;
+      --ok: #3fb950;
+      --warn: #d29922;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
+    header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid #30363d;
+    }
+    h1 { margin: 0; font-size: 1.25rem; font-weight: 600; }
+    .sub { color: var(--muted); font-size: 0.9rem; margin-top: 0.35rem; }
+    main { padding: 1.25rem 1.5rem 2rem; max-width: 1100px; margin: 0 auto; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1rem;
+    }
+    label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 0.35rem;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 0.55rem 0.65rem;
+      border-radius: 6px;
+      border: 1px solid #30363d;
+      background: var(--panel);
+      color: var(--text);
+      font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+      font-size: 0.9rem;
+    }
+    textarea { min-height: 3.2rem; resize: vertical; }
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.25);
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 1rem 1.1rem;
+      margin-bottom: 1rem;
+    }
+    .panel h2 {
+      margin: 0 0 0.75rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--accent);
+    }
+    button {
+      cursor: pointer;
+      padding: 0.65rem 1.25rem;
+      border-radius: 8px;
+      border: none;
+      background: var(--accent);
+      color: #0d1117;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+    button:hover { filter: brightness(1.08); }
+    button:active { transform: scale(0.98); }
+    .err {
+      margin-top: 0.75rem;
+      padding: 0.65rem 0.85rem;
+      border-radius: 8px;
+      background: rgba(248, 81, 73, 0.12);
+      border: 1px solid #f85149;
+      color: #ff7b72;
+      font-size: 0.88rem;
+      white-space: pre-wrap;
+    }
+    .hint { font-size: 0.78rem; color: var(--muted); margin-top: 0.35rem; }
+    .chart-wrap {
+      position: relative;
+      height: 420px;
+      margin-top: 0.5rem;
+    }
+    .legend-inline {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-top: 0.5rem;
+    }
+    .dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 0.35rem; vertical-align: middle; }
+    details.parse-help {
+      margin-top: 1rem;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      border: 1px solid #30363d;
+      background: rgba(15, 20, 25, 0.6);
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    details.parse-help summary {
+      cursor: pointer;
+      color: var(--accent);
+      font-weight: 600;
+      user-select: none;
+    }
+    details.parse-help ul { margin: 0.5rem 0 0 1.1rem; padding: 0; }
+    details.parse-help li { margin: 0.25rem 0; }
+    details.parse-help code { color: var(--text); font-size: 0.82rem; }
+    #parsePreview {
+      margin-top: 0.6rem;
+      padding: 0.5rem 0.65rem;
+      border-radius: 6px;
+      background: var(--bg);
+      border: 1px dashed #30363d;
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 0.8rem;
+      color: #7ee787;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    #parsePreview:empty { display: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>ДУ первого порядка: явный и неявный метод Эйлера</h1>
+    <div class="sub">y′ = f(x, y). Строка сначала <strong>нормализуется</strong> (см. блок ниже), затем выполняется как выражение JavaScript: переменные <code>x</code>, <code>y</code> (для f) или только <code>x</code> (для точного решения); функции <code>Math.sin</code>, <code>Math.exp</code> и т.д.</div>
+  </header>
+  <main>
+    <div class="panel">
+      <h2>Уравнение и параметры</h2>
+      <div class="grid">
+        <div>
+          <label for="fxy">f(x, y) — правая часть y′ = f(x, y)</label>
+          <textarea id="fxy" rows="2" spellcheck="false">-y</textarea>
+          <div class="hint">Примеры: <code>-y</code>, <code>2x - y</code>, <code>x^2 + 3(x+1)</code>, <code>2 Math.sin(x)</code></div>
+        </div>
+        <div>
+          <label for="yExact">Точное решение y(x) (необязательно)</label>
+          <textarea id="yExact" rows="2" spellcheck="false">Math.exp(-x)</textarea>
+          <div class="hint">Только переменная <code>x</code>. Допускаются те же правила <code>^</code> и неявного умножения, что и для f. Пусто — кривая «точное» не строится.</div>
+        </div>
+        <div>
+          <label for="y0">Начальное значение y(x<sub>нач</sub>) = y₀</label>
+          <input id="y0" type="number" value="1" step="any" />
+        </div>
+      </div>
+      <div class="grid" style="margin-top: 1rem;">
+        <div>
+          <label for="x0">Начало периода x<sub>нач</sub></label>
+          <input id="x0" type="number" value="0" step="any" />
+        </div>
+        <div>
+          <label for="x1">Конец периода x<sub>кон</sub></label>
+          <input id="x1" type="number" value="3" step="any" />
+        </div>
+        <div>
+          <label for="h">Шаг h</label>
+          <input id="h" type="number" value="0.2" step="any" min="1e-12" />
+        </div>
+      </div>
+      <div style="margin-top: 1rem;">
+        <button type="button" id="run">Рассчитать и построить график</button>
+      </div>
+      <details class="parse-help">
+        <summary>Как парсится формула</summary>
+        <ul>
+          <li>Все пробелы <strong>удаляются</strong> (внутри выражения), чтобы можно было писать компактно.</li>
+          <li>Степень: символ <code>^</code> заменяется на оператор JavaScript <code>**</code> (например <code>x^3</code> → <code>x**3</code>, <code>2^(x+1)</code> → <code>2**(x+1)</code>).</li>
+          <li>Неявное умножение: между сомножителями вставляется <code>*</code>, если слева и справа «подразумевается» умножение: число и <code>(</code>, число и буква, <code>)</code> и <code>(</code>, <code>x</code>/<code>y</code> и <code>(</code>, <code>x</code>/<code>y</code> и цифра, <code>x</code>/<code>y</code> и другое <code>x</code>/<code>y</code>, число или <code>x</code>/<code>y</code> или <code>)</code> и начало <code>Math.</code> (после нормализации).</li>
+          <li>Запись вида <code>1e-6</code> (экспонента числа) <strong>не</strong> разбивается на <code>1*e-6</code>: перед <code>e</code>/<code>E</code> после цифр проверяется, что это именно экспоненциальная запись.</li>
+          <li>Префикс <code>Math.</code> временно помечается служебным символом, чтобы внутри имён функций не появлялись лишние <code>*</code>.</li>
+          <li>Итоговая строка оборачивается в <code>return ( … );</code> и компилируется через <code>new Function('x','y', …)</code> или <code>new Function('x', …)</code> — это тот же синтаксис, что в JavaScript (скобки, <code>Math</code>, <code>**</code>).</li>
+          <li><strong>Примеры:</strong> <code>2x</code> → <code>2*x</code>; <code>(x+1)(x-1)</code> → <code>(x+1)*(x-1)</code>; <code>x^2</code> → <code>x**2</code>; <code>10^-3</code> → <code>10**-3</code>; <code>2 Math.sin(x)</code> → <code>2*Math.sin(x)</code>.</li>
+        </ul>
+        <div><strong>После нормализации (для f и для точного решения):</strong></div>
+        <div id="parsePreview"></div>
+      </details>
+      <div id="errorBox" class="err" style="display: none;"></div>
+    </div>
+
+    <div class="panel">
+      <h2>График y(x)</h2>
+      <div class="chart-wrap">
+        <canvas id="chart"></canvas>
+      </div>
+      <div class="hint legend-inline">
+        <span class="dot" style="background: rgb(63, 185, 80);"></span>явный Эйлер
+        <span class="dot" style="background: rgb(210, 153, 34); margin-left: 0.5rem;"></span>неявный Эйлер
+        <span class="dot" style="background: rgb(136, 146, 176); margin-left: 0.5rem;"></span>точное (если задано)
+      </div>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      /** Временная подстановка для Math., чтобы не вставлять * внутри «Math». */
+      var MATH_SENTINEL = "\uE000";
+
+      function stripSpaces(s) {
+        return String(s || "").trim().replace(/\s+/g, "");
+      }
+
+      function isDigit(c) {
+        return c >= "0" && c <= "9";
+      }
+
+      function isLetter(c) {
+        return /[a-zA-Z$_]/.test(c);
+      }
+
+      /** true, если на позиции i цифра и s[i+1..] — экспонента вида e±123 */
+      function isScientificExponentAt(s, i) {
+        if (!isDigit(s[i])) return false;
+        if (s[i + 1] !== "e" && s[i + 1] !== "E") return false;
+        var j = i + 2;
+        if (j < s.length && (s[j] === "+" || s[j] === "-")) j++;
+        return j < s.length && isDigit(s[j]);
+      }
+
+      /**
+       * Вставляет явное умножение * там, где в «школьной» записи оно подразумевается.
+       * @param {string} s — без пробелов, ^ уже заменены на **, Math. заменены на sentinel.
+       */
+      function insertImplicitMultiply(s) {
+        var out = [];
+        var n = s.length;
+        for (var i = 0; i < n; i++) {
+          out.push(s.charAt(i));
+          if (i >= n - 1) break;
+          var L = s.charAt(i);
+          var R = s.charAt(i + 1);
+          if (needsImplicitStar(L, R, s, i)) out.push("*");
+        }
+        return out.join("");
+      }
+
+      function needsImplicitStar(L, R, s, i) {
+        if (L === MATH_SENTINEL || R === MATH_SENTINEL) {
+          if (R === MATH_SENTINEL) {
+            return L === ")" || isDigit(L) || L === "x" || L === "y";
+          }
+          return false;
+        }
+
+        if (L === ")") {
+          return R === "(" || isDigit(R) || isLetter(R);
+        }
+
+        if (isDigit(L)) {
+          if (R === "(") return true;
+          if (isLetter(R)) {
+            if ((R === "e" || R === "E") && isScientificExponentAt(s, i)) return false;
+            return true;
+          }
+          return false;
+        }
+
+        if (L === "x" || L === "y") {
+          if (R === "(" || isDigit(R)) return true;
+          if (R === "x" || R === "y") return true;
+          /* Только «x Math.» / «y Math.», иначе ломается «exp» → «e*x*p». */
+          if (R === "M" && s.substr(i + 1, 5) === "Math.") return true;
+        }
+
+        return false;
+      }
+
+      /** Нормализация перед компиляцией в JS. */
+      function preprocessMathExpr(raw) {
+        var s = stripSpaces(raw);
+        if (!s) return "";
+        s = s.replace(/\^/g, "**");
+        s = s.replace(/Math\./g, MATH_SENTINEL);
+        s = insertImplicitMultiply(s);
+        s = s.split(MATH_SENTINEL).join("Math.");
+        return s;
+      }
+
+      /**
+       * @param {string} body
+       * @param {string[]} params
+       * @returns {{ fn: Function, expanded: string }}
+       */
+      function compileFn(body, params) {
+        body = String(body || "").trim();
+        if (!body) throw new Error("Пустое выражение.");
+        var js = preprocessMathExpr(body);
+        if (!js) throw new Error("Пустое выражение.");
+        try {
+          var args = params.concat(["return (" + js + ");"]);
+          return {
+            fn: Function.apply(null, args),
+            expanded: js
+          };
+        } catch (e) {
+          throw new Error("Синтаксическая ошибка в выражении: " + (e && e.message ? e.message : e));
+        }
+      }
+
+      /** @param {(x:number,y:number)=>number} f */
+      function explicitEuler(f, xStart, xEnd, y0, h) {
+        const xs = [];
+        const ys = [];
+        let x = xStart;
+        let y = y0;
+        const dir = xEnd >= xStart ? 1 : -1;
+        const hh = Math.abs(h) * dir;
+        if (hh === 0) throw new Error("Шаг h не может быть нулём.");
+        xs.push(x);
+        ys.push(y);
+        const guard = 1e7;
+        let n = 0;
+        while (dir * (xEnd - x) > 1e-15 * Math.max(1, Math.abs(xEnd))) {
+          if (++n > guard) throw new Error("Слишком много шагов; уменьшите интервал или увеличьте шаг.");
+          const step = Math.abs(xEnd - x) < Math.abs(hh) ? (xEnd - x) : hh;
+          y = y + step * f(x, y);
+          x = x + step;
+          xs.push(x);
+          ys.push(y);
+        }
+        return { xs, ys };
+      }
+
+      /**
+       * Неявный Эйлер: y_{n+1} = y_n + h * f(x_{n+1}, y_{n+1})
+       * Решаем F(y)=0 методом Ньютона с численной производной.
+       * @param {(x:number,y:number)=>number} f
+       */
+      function implicitEulerStep(f, xNext, yPrev, h) {
+        const tol = 1e-10;
+        const maxIt = 80;
+        const eps = 1e-8;
+        function F(y) {
+          return y - yPrev - h * f(xNext, y);
+        }
+        const xCur = xNext - h;
+        let y = yPrev + h * f(xCur, yPrev);
+        for (let k = 0; k < maxIt; k++) {
+          const Fv = F(y);
+          if (Math.abs(Fv) < tol) return y;
+          const Fp = (F(y + eps) - F(y - eps)) / (2 * eps);
+          if (!isFinite(Fp) || Math.abs(Fp) < 1e-14) {
+            y = y - Fv;
+          } else {
+            y = y - Fv / Fp;
+          }
+          if (!isFinite(y)) throw new Error("Неявный Эйлер: расходимость при решении нелинейного шага.");
+        }
+        throw new Error("Неявный Эйлер: не сошёлся Ньютон за " + maxIt + " итераций.");
+      }
+
+      /** @param {(x:number,y:number)=>number} f */
+      function implicitEuler(f, xStart, xEnd, y0, h) {
+        const xs = [];
+        const ys = [];
+        let x = xStart;
+        let y = y0;
+        const dir = xEnd >= xStart ? 1 : -1;
+        const hh = Math.abs(h) * dir;
+        if (hh === 0) throw new Error("Шаг h не может быть нулём.");
+        xs.push(x);
+        ys.push(y);
+        const guard = 1e7;
+        let n = 0;
+        while (dir * (xEnd - x) > 1e-15 * Math.max(1, Math.abs(xEnd))) {
+          if (++n > guard) throw new Error("Слишком много шагов; уменьшите интервал или увеличьте шаг.");
+          const step = Math.abs(xEnd - x) < Math.abs(hh) ? (xEnd - x) : hh;
+          const xNext = x + step;
+          y = implicitEulerStep(f, xNext, y, step);
+          x = xNext;
+          xs.push(x);
+          ys.push(y);
+        }
+        return { xs, ys };
+      }
+
+      let chart;
+      function ensureChart() {
+        const ctx = document.getElementById("chart").getContext("2d");
+        if (chart) chart.destroy();
+        chart = new Chart(ctx, {
+          type: "line",
+          data: { datasets: [] },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: "index", intersect: false },
+            plugins: {
+              legend: { labels: { color: "#c9d1d9" } },
+              title: { display: true, text: "Сравнение решений", color: "#8b9cb3" }
+            },
+            scales: {
+              x: {
+                type: "linear",
+                title: { display: true, text: "x", color: "#8b9cb3" },
+                ticks: { color: "#8b9cb3" },
+                grid: { color: "rgba(139, 156, 179, 0.15)" }
+              },
+              y: {
+                title: { display: true, text: "y", color: "#8b9cb3" },
+                ticks: { color: "#8b9cb3" },
+                grid: { color: "rgba(139, 156, 179, 0.15)" }
+              }
+            }
+          }
+        });
+      }
+
+      function toPoints(xs, ys) {
+        return xs.map((x, i) => ({ x, y: ys[i] }));
+      }
+
+      function run() {
+        const errBox = document.getElementById("errorBox");
+        errBox.style.display = "none";
+        errBox.textContent = "";
+
+        const fBody = document.getElementById("fxy").value;
+        const exactBody = document.getElementById("yExact").value.trim();
+        const x0 = Number(document.getElementById("x0").value);
+        const x1 = Number(document.getElementById("x1").value);
+        const h = Number(document.getElementById("h").value);
+        const y0 = Number(document.getElementById("y0").value);
+
+        if (!isFinite(x0) || !isFinite(x1)) {
+          errBox.textContent = "Введите корректные границы интервала.";
+          errBox.style.display = "block";
+          return;
+        }
+        if (!isFinite(h) || h === 0) {
+          errBox.textContent = "Шаг h должен быть конечным и ненулевым.";
+          errBox.style.display = "block";
+          return;
+        }
+        if (!isFinite(y0)) {
+          errBox.textContent = "Начальное значение y₀ должно быть числом.";
+          errBox.style.display = "block";
+          return;
+        }
+
+        var preview = document.getElementById("parsePreview");
+        preview.textContent = "";
+
+        var f;
+        var parseLines = [];
+        try {
+          var rf = compileFn(fBody, ["x", "y"]);
+          f = rf.fn;
+          parseLines.push("f(x, y) → " + rf.expanded);
+        } catch (e) {
+          errBox.textContent = String(e.message || e);
+          errBox.style.display = "block";
+          return;
+        }
+
+        var exE, imE;
+        try {
+          exE = explicitEuler(f, x0, x1, y0, h);
+          imE = implicitEuler(f, x0, x1, y0, h);
+        } catch (e) {
+          errBox.textContent = String(e.message || e);
+          errBox.style.display = "block";
+          return;
+        }
+
+        var exactPts = null;
+        if (exactBody) {
+          var g;
+          try {
+            var rg = compileFn(exactBody, ["x"]);
+            g = rg.fn;
+            parseLines.push("y(x) → " + rg.expanded);
+          } catch (e) {
+            errBox.textContent = "Ошибка в точном решении: " + String(e.message || e);
+            errBox.style.display = "block";
+            return;
+          }
+          const nx = Math.min(2000, Math.max(50, Math.ceil(Math.abs(x1 - x0) / (Math.abs(h) * 0.25)) + 1));
+          const xs = [];
+          const ys = [];
+          for (let i = 0; i <= nx; i++) {
+            const t = i / nx;
+            const x = x0 + t * (x1 - x0);
+            let yv;
+            try {
+              yv = g(x);
+            } catch (e) {
+              errBox.textContent = "Ошибка при вычислении точного решения в x=" + x + ": " + (e && e.message ? e.message : e);
+              errBox.style.display = "block";
+              return;
+            }
+            if (!isFinite(yv)) {
+              errBox.textContent = "Точное решение не конечно в точке x = " + x;
+              errBox.style.display = "block";
+              return;
+            }
+            xs.push(x);
+            ys.push(yv);
+          }
+          exactPts = toPoints(xs, ys);
+        }
+
+        preview.textContent = parseLines.join("\n");
+
+        ensureChart();
+        const datasets = [
+          {
+            label: "Явный Эйлер",
+            data: toPoints(exE.xs, exE.ys),
+            borderColor: "rgb(63, 185, 80)",
+            backgroundColor: "rgba(63, 185, 80, 0.15)",
+            tension: 0.1,
+            pointRadius: 2,
+            borderWidth: 2
+          },
+          {
+            label: "Неявный Эйлер",
+            data: toPoints(imE.xs, imE.ys),
+            borderColor: "rgb(210, 153, 34)",
+            backgroundColor: "rgba(210, 153, 34, 0.15)",
+            tension: 0.1,
+            pointRadius: 2,
+            borderWidth: 2
+          }
+        ];
+        if (exactPts) {
+          datasets.push({
+            label: "Точное y(x)",
+            data: exactPts,
+            borderColor: "rgb(136, 146, 176)",
+            backgroundColor: "rgba(136, 146, 176, 0.1)",
+            tension: 0.2,
+            pointRadius: 0,
+            borderWidth: 2
+          });
+        }
+        chart.data.datasets = datasets;
+        chart.update();
+      }
+
+      document.getElementById("run").addEventListener("click", run);
+      window.addEventListener("load", function () {
+        try { run(); } catch (e) { /* ignore first paint errors */ }
+      });
+    })();
+  </script>
+</body>
+</html>
