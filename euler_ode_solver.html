@@ -453,7 +453,7 @@
         <div>
           <label for="yExact">Точное решение y(x) (необязательно)</label>
           <textarea id="yExact" rows="2" spellcheck="false">Math.exp(-x)</textarea>
-          <div class="hint">Только переменная <code>x</code>. Допускаются те же правила <code>^</code> и неявного умножения, что и для f. Пусто — кривая «точное» не строится.</div>
+          <div class="hint">Только переменная <code>x</code>. Допускаются те же правила <code>^</code> и неявного умножения, что и для f. Пусто — кривая «точное» не строится. Если поле пусто и при этом <strong>y′ = f(x)</strong> (f не зависит от y), страница попытается <strong>автоматически</strong> подставить элементарную первообразную по узкому набору шаблонов (степени, sin/cos, e^(±x), 1/(1+x²), √x, k·x·e^(−x²) и суммы по +/−) и проверит её численно; иначе эталон нужно задать вручную.</div>
         </div>
         <div>
           <label for="y0">Начальное значение y(x<sub>нач</sub>) = y₀</label>
@@ -966,6 +966,141 @@
           ys.push(y0 + acc);
         }
         return { xs: xs.slice(), ys: ys };
+      }
+
+      /**
+       * Заменяет в выражении независимую переменную x на числовой литерал (для F(x₀)).
+       */
+      function embedXAsNumber(expr, x0val) {
+        var lit = "(" + String(x0val) + ")";
+        return String(expr || "").replace(/\bx\b/g, lit);
+      }
+
+      /**
+       * Разбивает нормализованное выражение f(x) на слагаемые по верхнему уровню +/− (скобки учитываются).
+       * @returns {{ sign: number, t: string }[]}
+       */
+      function splitAdditiveTopLevel(expr) {
+        expr = String(expr || "").replace(/\s+/g, "");
+        if (!expr) return [];
+        var parts = [];
+        var d = 0;
+        var beg = 0;
+        for (var i = 0; i < expr.length; i++) {
+          if (expr.charAt(i) === "(") d++;
+          else if (expr.charAt(i) === ")") d--;
+          if (d === 0 && i > beg && (expr.charAt(i) === "+" || expr.charAt(i) === "-")) {
+            parts.push(expr.slice(beg, i));
+            beg = i;
+          }
+        }
+        parts.push(expr.slice(beg));
+        var terms = [];
+        for (var j = 0; j < parts.length; j++) {
+          var seg = parts[j].trim();
+          if (!seg) continue;
+          var sig = 1;
+          if (seg.charAt(0) === "+") seg = seg.slice(1).trim();
+          else if (seg.charAt(0) === "-") {
+            sig = -1;
+            seg = seg.slice(1).trim();
+          }
+          terms.push({ sign: sig, t: seg });
+        }
+        return terms;
+      }
+
+      /**
+       * Первообразная одного слагаемого t (без внешнего знака), если t — из узкого набора шаблонов после preprocessMathExpr.
+       * @returns {string|null} выражение F(x) с уже расставленными скобками
+       */
+      function indefiniteIntegralTermFofX(t) {
+        if (!t) return null;
+        if (t === "0") return "0";
+        if (/^-?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?$/.test(t)) return "(" + t + "*x)";
+        if (t === "x") return "(x**2)/2";
+        var mPow = /^x\*\*(-?\d+)$/.exec(t);
+        if (mPow) {
+          var n = parseInt(mPow[1], 10);
+          if (n === -1) return "Math.log(x)";
+          return "(x**(" + (n + 1) + ")/" + (n + 1) + ")";
+        }
+        var mLin = /^(-?[0-9.]+(?:[eE][+-]?[0-9]+)?)\*x$/.exec(t);
+        if (mLin) return "(" + mLin[1] + "*(x**2)/2)";
+        var mLin2 = /^x\*(-?[0-9.]+(?:[eE][+-]?[0-9]+)?)$/.exec(t);
+        if (mLin2) return "(" + mLin2[1] + "*(x**2)/2)";
+        if (t === "Math.sin(x)") return "(-Math.cos(x))";
+        if (t === "Math.cos(x)") return "Math.sin(x)";
+        if (t === "Math.exp(x)") return "Math.exp(x)";
+        if (t === "Math.exp(-x)") return "(-Math.exp(-x))";
+        if (t === "1/(1+x**2)") return "Math.atan(x)";
+        if (t === "Math.sqrt(x)") return "((2/3)*x**(3/2))";
+        if (t === "2*x*Math.exp(-(x**2))") return "(-Math.exp(-(x**2)))";
+        var mGauss = /^([0-9.]+)\*x\*Math\.exp\(-\(x\*\*2\)\)$/.exec(t);
+        if (mGauss) {
+          var kk = parseFloat(mGauss[1]);
+          if (isFinite(kk)) return "(" + -kk / 2 + "*Math.exp(-(x**2)))";
+        }
+        return null;
+      }
+
+      /**
+       * Собирает первообразную F(x) для всего разложения f(x) по слагаемым (если каждое слагаемое распознано).
+       */
+      function buildAntiderivativeExprFofX(expandedJs) {
+        var terms = splitAdditiveTopLevel(expandedJs);
+        if (!terms.length) return null;
+        var chunks = [];
+        for (var i = 0; i < terms.length; i++) {
+          var ind = indefiniteIntegralTermFofX(terms[i].t);
+          if (!ind) return null;
+          if (i === 0) chunks.push(terms[i].sign < 0 ? "-(" + ind + ")" : ind);
+          else chunks.push(terms[i].sign < 0 ? " - (" + ind + ")" : " + (" + ind + ")");
+        }
+        return chunks.join("");
+      }
+
+      /**
+       * Проверка: производная g(x) совпадает с f(x,0) на нескольких точках (численно).
+       */
+      function validateAutoExactDerivative(gFn, f, xa, xb) {
+        var lo = Math.min(xa, xb);
+        var hi = Math.max(xa, xb);
+        if (hi === lo) return true;
+        var eps = 1e-6 * Math.max(1, Math.abs(hi - lo));
+        for (var t = 0; t <= 12; t++) {
+          var xv = lo + ((hi - lo) * t) / 12;
+          var dG = (gFn(xv + eps) - gFn(xv - eps)) / (2 * eps);
+          var fx = f(xv, 0);
+          if (!isFinite(dG) || !isFinite(fx)) return false;
+          if (Math.abs(dG - fx) > 2e-5 * (1 + Math.abs(fx))) return false;
+        }
+        return true;
+      }
+
+      /**
+       * Пытается построить y(x) = y₀ + F(x) − F(x₀) для y′ = f(x), если f не зависит от y и f попадает в набор шаблонов.
+       * Общее решение ОДУ в символах здесь не ищется — только элементарные первообразные и суммы по +/−.
+       * @returns {{ fn: Function, formula: string, expanded: string, note: string }|null}
+       */
+      function tryDeriveAutoExactYForFOfX(expandedF, y0, x0, f, xa, xb) {
+        if (!rhsDependsOnlyOnX(f, xa, xb)) return null;
+        var Fsum = buildAntiderivativeExprFofX(expandedF);
+        if (!Fsum) return null;
+        var body = String(y0) + "+((" + Fsum + ")-(" + embedXAsNumber(Fsum, x0) + "))";
+        try {
+          var rg = compileFn(body, ["x"]);
+          if (!validateAutoExactDerivative(rg.fn, f, xa, xb)) return null;
+          return {
+            fn: rg.fn,
+            formula: body,
+            expanded: rg.expanded,
+            note:
+              "Авто-эталон: для y′ = f(x) найдена элементарная первообразная по шаблонам (степени x, sin/cos x, e^(±x), 1/(1+x²), √x, k·x·e^(−x²) и их суммы по +/−). Поле «Точное решение» было пусто — формула подставлена; при f(x) вне набора эталон не строится."
+          };
+        } catch (eAuto) {
+          return null;
+        }
       }
 
       /**
@@ -2146,13 +2281,23 @@
           }
         }
 
+        /* Авто-эталон: только если y′ = f(x), поле эталона пусто и не идёт восстановление из истории/файла. */
+        if (!exactBody && !historyRestoring && rhsDependsOnlyOnX(f, x0, x1)) {
+          var autoEx = tryDeriveAutoExactYForFOfX(rf.expanded, y0, x0, f, x0, x1);
+          if (autoEx) {
+            document.getElementById("yExact").value = autoEx.formula;
+            parseLines.push(autoEx.note);
+          }
+        }
+
         /* --- Опционально: плотная кривая «точного» решения y(x) для сравнения --- */
         var exactPts = null;
         var exactFnSaved = null;
-        if (exactBody) {
+        var exactWork = document.getElementById("yExact").value.trim();
+        if (exactWork) {
           var g;
           try {
-            var rg = compileFn(exactBody, ["x"]);
+            var rg = compileFn(exactWork, ["x"]);
             g = rg.fn;
             exactFnSaved = g;
             parseLines.push("y(x) → " + rg.expanded);
