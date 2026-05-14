@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <title>Метод Эйлера: явный и неявный</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
@@ -28,6 +29,49 @@
       padding: 1.25rem 1.5rem;
       border-bottom: 1px solid #30363d;
     }
+    .header-top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .header-tools {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .header-tools label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      margin: 0;
+      font-size: 0.82rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .header-tools input[type="number"] {
+      width: auto;
+      max-width: 3.5rem;
+      min-width: 2.5rem;
+      padding: 0.35rem 0.45rem;
+    }
+    .header-tools button {
+      padding: 0.45rem 0.75rem;
+      font-size: 0.88rem;
+      margin: 0;
+    }
+    .header-tools button#saveStateBtn,
+    .header-tools button#loadStateBtn {
+      background: linear-gradient(180deg, #2f6a4a, #235237);
+      color: #e6edf3;
+    }
+    .header-tools button:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+      filter: grayscale(0.35);
+    }
     h1 { margin: 0; font-size: 1.25rem; font-weight: 600; }
     .sub { color: var(--muted); font-size: 0.9rem; margin-top: 0.35rem; }
     main { padding: 1.25rem 1.5rem 2rem; max-width: 1100px; margin: 0 auto; }
@@ -42,7 +86,7 @@
       color: var(--muted);
       margin-bottom: 0.35rem;
     }
-    input, textarea {
+    input, textarea, select {
       width: 100%;
       padding: 0.55rem 0.65rem;
       border-radius: 6px;
@@ -52,8 +96,12 @@
       font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
       font-size: 0.9rem;
     }
+    select {
+      cursor: pointer;
+      appearance: auto;
+    }
     textarea { min-height: 3.2rem; resize: vertical; }
-    input:focus, textarea:focus {
+    input:focus, textarea:focus, select:focus {
       outline: none;
       border-color: var(--accent);
       box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.25);
@@ -139,21 +187,51 @@
       word-break: break-all;
     }
     #parsePreview:empty { display: none; }
+    .preset-bar {
+      margin-bottom: 1rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid #30363d;
+    }
+    #presetMeta {
+      margin-top: 0.4rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+    #presetMeta:empty { display: none; }
   </style>
 </head>
 <body>
   <header>
-    <h1>ДУ первого порядка: явный и неявный метод Эйлера</h1>
-    <div class="sub">y′ = f(x, y). Строка сначала <strong>нормализуется</strong> (см. блок ниже), затем выполняется как выражение JavaScript: переменные <code>x</code>, <code>y</code> (для f) или только <code>x</code> (для точного решения); функции <code>Math.sin</code>, <code>Math.exp</code> и т.д.</div>
+    <div class="header-top">
+      <div>
+        <h1>ДУ первого порядка: явный и неявный метод Эйлера</h1>
+        <div class="sub">y′ = f(x, y). Строка <strong>нормализуется</strong> (см. ниже), затем выполняется как JavaScript: <code>x</code>, <code>y</code> или только <code>x</code>; <code>Math.*</code>; «школьные» обозначения: <code>sh</code>/<code>ch</code>/<code>csh</code>/<code>th</code>, <code>sch</code>/<code>cth</code>/<code>csch</code>, <code>ln</code>/<code>lg</code>/<code>lb</code>, <code>log10</code>/<code>log2</code> и т.д.</div>
+      </div>
+      <div class="header-tools" aria-label="История расчётов и файл состояния">
+        <label for="historyMaxStates">Шагов истории</label>
+        <input type="number" id="historyMaxStates" min="1" max="500" value="100" inputmode="numeric" title="Сколько последних успешных расчётов хранить" />
+        <button type="button" id="historyBack" title="Предыдущий расчёт" disabled>←</button>
+        <button type="button" id="historyFwd" title="Следующий расчёт" disabled>→</button>
+        <button type="button" id="saveStateBtn">Сохранить в файл</button>
+        <button type="button" id="loadStateBtn">Загрузить из файла</button>
+        <input type="file" id="stateFile" accept="application/json,.json" style="display: none" />
+      </div>
+    </div>
   </header>
   <main>
     <div class="panel">
       <h2>Уравнение и параметры</h2>
+      <div class="preset-bar">
+        <label for="fPreset">Стандартные примеры (учебник, тесты жёсткости, модели из статей)</label>
+        <select id="fPreset" aria-describedby="presetMeta"></select>
+        <div id="presetMeta" role="note"></div>
+      </div>
       <div class="grid">
         <div>
           <label for="fxy">f(x, y) — правая часть y′ = f(x, y)</label>
           <textarea id="fxy" rows="2" spellcheck="false">-y</textarea>
-          <div class="hint">Примеры: <code>-y</code>, <code>2x - y</code>, <code>x^2 + 3(x+1)</code>, <code>2 Math.sin(x)</code></div>
+          <div class="hint">Примеры: <code>-y</code>, <code>x^2</code>, <code>sh(x)</code>, <code>lg(x+1)</code>, <code>2 ln(y)</code>, <code>cth(x)</code></div>
         </div>
         <div>
           <label for="yExact">Точное решение y(x) (необязательно)</label>
@@ -187,11 +265,14 @@
         <ul>
           <li>Все пробелы <strong>удаляются</strong> (внутри выражения), чтобы можно было писать компактно.</li>
           <li>Степень: символ <code>^</code> заменяется на оператор JavaScript <code>**</code> (например <code>x^3</code> → <code>x**3</code>, <code>2^(x+1)</code> → <code>2**(x+1)</code>).</li>
+          <li><strong>Гиперболические (часто как в учебниках):</strong> <code>sh</code> → <code>Math.sinh</code>, <code>ch</code> и <code>csh</code> → <code>Math.cosh</code>, <code>th</code> → <code>Math.tanh</code>; <code>sch</code> (sech), <code>cth</code> (ctnh), <code>csch</code> — через вспомогательные функции в теле выражения (обратные к <code>cosh</code>/<code>tanh</code>/<code>sinh</code>).</li>
+          <li><strong>Логарифмы:</strong> <code>ln</code> → <code>Math.log</code>; <code>lg</code> и <code>log10</code> → <code>Math.log10</code>; <code>lb</code> и <code>log2</code> → <code>Math.log2</code>. Запись <code>log(…)</code> без префикса не подменяется (чтобы не путать с натуральным/десятичным логарифмом).</li>
+          <li>Перед перечисленными именами после <code>)</code>, цифры, <code>x</code> или <code>y</code> при необходимости вставляется <code>*</code> (как для <code>ln</code>): например <code>xsh(t)</code> → <code>x*Math.sinh(t)</code>.</li>
           <li>Неявное умножение: между сомножителями вставляется <code>*</code>, если слева и справа «подразумевается» умножение: число и <code>(</code>, число и буква, <code>)</code> и <code>(</code>, <code>x</code>/<code>y</code> и <code>(</code>, <code>x</code>/<code>y</code> и цифра, <code>x</code>/<code>y</code> и другое <code>x</code>/<code>y</code>, число или <code>x</code>/<code>y</code> или <code>)</code> и начало <code>Math.</code> (после нормализации).</li>
           <li>Запись вида <code>1e-6</code> (экспонента числа) <strong>не</strong> разбивается на <code>1*e-6</code>: перед <code>e</code>/<code>E</code> после цифр проверяется, что это именно экспоненциальная запись.</li>
           <li>Префикс <code>Math.</code> временно помечается служебным символом, чтобы внутри имён функций не появлялись лишние <code>*</code>.</li>
           <li>Итоговая строка оборачивается в <code>return ( … );</code> и компилируется через <code>new Function('x','y', …)</code> или <code>new Function('x', …)</code> — это тот же синтаксис, что в JavaScript (скобки, <code>Math</code>, <code>**</code>).</li>
-          <li><strong>Примеры:</strong> <code>2x</code> → <code>2*x</code>; <code>(x+1)(x-1)</code> → <code>(x+1)*(x-1)</code>; <code>x^2</code> → <code>x**2</code>; <code>10^-3</code> → <code>10**-3</code>; <code>2 Math.sin(x)</code> → <code>2*Math.sin(x)</code>.</li>
+          <li><strong>Примеры:</strong> <code>2x</code> → <code>2*x</code>; <code>x^2</code> → <code>x**2</code>; <code>lg(x)</code> → <code>Math.log10(x)</code>; <code>sh(y)</code> → <code>Math.sinh(y)</code>; <code>cth(x)</code> → вызов <code>cth</code>; <code>ln(y)</code> → <code>Math.log(y)</code>.</li>
         </ul>
         <div><strong>После нормализации (для f и для точного решения):</strong></div>
         <div id="parsePreview"></div>
@@ -216,6 +297,11 @@
     (function () {
       /** Временная подстановка для Math., чтобы не вставлять * внутри «Math». */
       var MATH_SENTINEL = "\uE000";
+      /** Преамбула к телу: cth/sch/csch — нет в Math, остальное подставляется в строке. */
+      var MATH_PRELUDE =
+        "var cth=function(z){return 1/Math.tanh(z);};" +
+        "var sch=function(z){return 1/Math.cosh(z);};" +
+        "var csch=function(z){return 1/Math.sinh(z);};";
 
       function stripSpaces(s) {
         return String(s || "").trim().replace(/\s+/g, "");
@@ -236,6 +322,17 @@
         var j = i + 2;
         if (j < s.length && (s[j] === "+" || s[j] === "-")) j++;
         return j < s.length && isDigit(s[j]);
+      }
+
+      /** true, если с позиции i+1 начинается «школьное» имя функции (после strip, до замены на Math). */
+      function needsImplicitStarBeforeFunc(L, s, i) {
+        if (!(L === ")" || isDigit(L) || L === "x" || L === "y")) return false;
+        var r = s.substr(i + 1);
+        var prefs = ["csch(", "csh(", "cth(", "log10(", "log2(", "sch(", "lg(", "lb(", "ln(", "sh(", "ch(", "th("];
+        for (var pi = 0; pi < prefs.length; pi++) {
+          if (r.indexOf(prefs[pi]) === 0) return true;
+        }
+        return false;
       }
 
       /**
@@ -267,6 +364,9 @@
           return R === "(" || isDigit(R) || isLetter(R);
         }
 
+        /* xln(y), 2sh(t), xlg(y) … — * перед «школьными» именами функций */
+        if (needsImplicitStarBeforeFunc(L, s, i)) return true;
+
         if (isDigit(L)) {
           if (R === "(") return true;
           if (isLetter(R)) {
@@ -291,6 +391,18 @@
         var s = stripSpaces(raw);
         if (!s) return "";
         s = s.replace(/\^/g, "**");
+        /* Длинные имена первыми, чтобы не разобрать csh как ch и т.п. */
+        s = s.replace(/\blog10\s*\(/gi, "Math.log10(");
+        s = s.replace(/\blog2\s*\(/gi, "Math.log2(");
+        s = s.replace(/\bcsch\s*\(/gi, "csch(");
+        s = s.replace(/\bcth\s*\(/gi, "cth(");
+        s = s.replace(/\bcsh\s*\(/gi, "Math.cosh(");
+        s = s.replace(/\blg\s*\(/gi, "Math.log10(");
+        s = s.replace(/\blb\s*\(/gi, "Math.log2(");
+        s = s.replace(/\bln\s*\(/gi, "Math.log(");
+        s = s.replace(/\bsh\s*\(/gi, "Math.sinh(");
+        s = s.replace(/\bch\s*\(/gi, "Math.cosh(");
+        s = s.replace(/\bth\s*\(/gi, "Math.tanh(");
         s = s.replace(/Math\./g, MATH_SENTINEL);
         s = insertImplicitMultiply(s);
         s = s.split(MATH_SENTINEL).join("Math.");
@@ -308,7 +420,7 @@
         var js = preprocessMathExpr(body);
         if (!js) throw new Error("Пустое выражение.");
         try {
-          var args = params.concat(["return (" + js + ");"]);
+          var args = params.concat([MATH_PRELUDE + "return (" + js + ");"]);
           return {
             fn: Function.apply(null, args),
             expanded: js
@@ -429,6 +541,316 @@
 
       function toPoints(xs, ys) {
         return xs.map((x, i) => ({ x, y: ys[i] }));
+      }
+
+      /** Готовые f(x,y) и параметры: мягкие, жёсткие (stiff), классические нелинейные. */
+      var PRESET_GROUPS = [
+        {
+          title: "Классика (мягкие, учебные)",
+          items: [
+            {
+              id: "decay",
+              label: "Экспоненциальное затухание: y′ = −y",
+              f: "-y",
+              yExact: "Math.exp(-x)",
+              y0: 1,
+              x0: 0,
+              x1: 3,
+              h: 0.2,
+              note: "Устойчивая линейная модель λ = −1; эталон для сравнения явного и неявного Эйлера."
+            },
+            {
+              id: "linear_xy",
+              label: "Линейная с источником: y′ = x − y",
+              f: "x-y",
+              yExact: "x-1+2*Math.exp(-x)",
+              y0: 1,
+              x0: 0,
+              x1: 3,
+              h: 0.15,
+              note: "При y(0)=1 точное решение y(x) = x − 1 + 2e^(−x)."
+            },
+            {
+              id: "separable_exp",
+              label: "Разделяющиеся переменные: y′ = −2x y → y = e^(−x²)",
+              f: "-2*x*y",
+              yExact: "Math.exp(-(x**2))",
+              y0: 1,
+              x0: 0,
+              x1: 2,
+              h: 0.12,
+              note: "Стандартный пример из курсов ОДУ с разделением переменных."
+            },
+            {
+              id: "logistic",
+              label: "Логистика (Ферхюльст): y′ = y(1−y)",
+              f: "y*(1-y)",
+              yExact: "1/(1+Math.exp(-x))",
+              y0: 0.5,
+              x0: 0,
+              x1: 6,
+              h: 0.12,
+              note: "Модель роста с насыщением; здесь y(0)=1/2, чтобы совпадало с заданным y(x)."
+            }
+          ]
+        },
+        {
+          title: "Жёсткие (stiff) — из тестов и обзоров методов",
+          items: [
+            {
+              id: "stiff_decay",
+              label: "Линейное жёсткое затухание: y′ = −40y",
+              f: "-40*y",
+              yExact: "Math.exp(-40*x)",
+              y0: 1,
+              x0: 0,
+              x1: 0.25,
+              h: 0.02,
+              note: "Большое |λ|: при том же h явный Эйлер обычно заметно хуже неявного (условие шага |hλ| ≪ 1)."
+            },
+            {
+              id: "stiff_inhom",
+              label: "Жёсткая неоднородность: y′ = −10y + 10e^(−x), точное y = e^(−x)",
+              f: "-10*y+10*Math.exp(-x)",
+              yExact: "Math.exp(-x)",
+              y0: 1,
+              x0: 0,
+              x1: 1.5,
+              h: 0.04,
+              note: "Частное решение совпадает с вынуждающим членом; типичный учебный stiff-пример."
+            },
+            {
+              id: "prothero_robinson",
+              label: "Prothero–Robinson: y′ = −λ(y−cos x) − sin x, λ = 25",
+              f: "-25*(y-Math.cos(x))-Math.sin(x)",
+              yExact: "Math.cos(x)",
+              y0: 1,
+              x0: 0,
+              x1: 6.283185307179586,
+              h: 0.08,
+              note: "Точное решение y = cos x при любом λ; жёсткость задаётся величиной λ (часто цитируется в статьях про BDF и неявные методы)."
+            },
+            {
+              id: "prothero_robinson_hard",
+              label: "Prothero–Robinson, очень жёстко: λ = 120",
+              f: "-120*(y-Math.cos(x))-Math.sin(x)",
+              yExact: "Math.cos(x)",
+              y0: 1,
+              x0: 0,
+              x1: 6.283185307179586,
+              h: 0.02,
+              note: "То же y = cos x; при большом λ явный Эйлер требует очень малого шага для устойчивости."
+            }
+          ]
+        },
+        {
+          title: "Нелинейные / иллюстрации из учебников",
+          items: [
+            {
+              id: "riccati_tan",
+              label: "Риккати: y′ = 1 + y², y(0)=0 → y = tan x",
+              f: "1+y**2",
+              yExact: "Math.tan(x)",
+              y0: 0,
+              x0: 0,
+              x1: 1.25,
+              h: 0.025,
+              note: "Интервал урезан до x < π/2 из-за полюса; хорошо видно накопление ошибки явного Эйлера."
+            },
+            {
+              id: "osc_mix",
+              label: "Быстрая осцилляция в f: y′ = −y + sin(8x) (точное не подставлено)",
+              f: "-y+Math.sin(8*x)",
+              yExact: "",
+              y0: 0,
+              x0: 0,
+              x1: 4,
+              h: 0.05,
+              note: "Сравните кривые явного и неявного Эйлера без эталона или задайте свой y(x) при необходимости."
+            }
+          ]
+        }
+      ];
+
+      var PRESET_BY_ID = {};
+
+      function buildPresetUi() {
+        var sel = document.getElementById("fPreset");
+        if (!sel) return;
+        sel.innerHTML = "";
+        var opt0 = document.createElement("option");
+        opt0.value = "";
+        opt0.textContent = "— Своя f(x,y) (ручной ввод ниже) —";
+        sel.appendChild(opt0);
+        for (var g = 0; g < PRESET_GROUPS.length; g++) {
+          var grp = PRESET_GROUPS[g];
+          var og = document.createElement("optgroup");
+          og.label = grp.title;
+          for (var j = 0; j < grp.items.length; j++) {
+            var it = grp.items[j];
+            PRESET_BY_ID[it.id] = it;
+            var o = document.createElement("option");
+            o.value = it.id;
+            o.textContent = it.label;
+            og.appendChild(o);
+          }
+          sel.appendChild(og);
+        }
+      }
+
+      function applyPreset(id) {
+        var meta = document.getElementById("presetMeta");
+        if (!meta) return;
+        if (!id || !PRESET_BY_ID[id]) {
+          meta.textContent = "";
+          return;
+        }
+        var p = PRESET_BY_ID[id];
+        document.getElementById("fxy").value = p.f;
+        document.getElementById("yExact").value = p.yExact || "";
+        document.getElementById("y0").value = String(p.y0);
+        document.getElementById("x0").value = String(p.x0);
+        document.getElementById("x1").value = String(p.x1);
+        document.getElementById("h").value = String(p.h);
+        meta.textContent = p.note || "";
+      }
+
+      /** --- История успешных расчётов и сохранение формы в файл --- */
+      var HISTORY_MAX_LS_KEY = "euler_ode_history_max";
+      var HISTORY_MAX_DEFAULT = 100;
+      var HISTORY_MAX_CAP = 500;
+      var runHistoryStates = [];
+      var runHistoryIndex = -1;
+      var historyRestoring = false;
+      /** Первый автозапуск run() при загрузке страницы не пишет в историю. */
+      var isBootstrapRun = true;
+
+      function getHistoryMax() {
+        var el = document.getElementById("historyMaxStates");
+        var v = el ? parseInt(String(el.value), 10) : HISTORY_MAX_DEFAULT;
+        if (!isFinite(v)) return HISTORY_MAX_DEFAULT;
+        return Math.max(1, Math.min(HISTORY_MAX_CAP, v));
+      }
+
+      function captureRunSnapshot() {
+        var fp = document.getElementById("fPreset");
+        return {
+          version: 1,
+          form: {
+            fxy: document.getElementById("fxy").value,
+            yExact: document.getElementById("yExact").value,
+            y0: document.getElementById("y0").value,
+            x0: document.getElementById("x0").value,
+            x1: document.getElementById("x1").value,
+            h: document.getElementById("h").value,
+            fPreset: fp ? fp.value : ""
+          }
+        };
+      }
+
+      function syncHistoryNavUi() {
+        var back = document.getElementById("historyBack");
+        var fwd = document.getElementById("historyFwd");
+        if (back) back.disabled = runHistoryIndex <= 0;
+        if (fwd) fwd.disabled = runHistoryIndex < 0 || runHistoryIndex >= runHistoryStates.length - 1;
+      }
+
+      function trimHistoryToCap() {
+        var cap = getHistoryMax();
+        while (runHistoryStates.length > cap) {
+          runHistoryStates.shift();
+          if (runHistoryIndex > 0) runHistoryIndex--;
+          else runHistoryIndex = 0;
+        }
+        if (runHistoryStates.length === 0) runHistoryIndex = -1;
+        else if (runHistoryIndex >= runHistoryStates.length) runHistoryIndex = runHistoryStates.length - 1;
+        syncHistoryNavUi();
+      }
+
+      function pushRunHistoryAfterSuccess() {
+        if (historyRestoring) return;
+        if (runHistoryIndex < runHistoryStates.length - 1) {
+          runHistoryStates = runHistoryStates.slice(0, runHistoryIndex + 1);
+        }
+        runHistoryStates.push(captureRunSnapshot());
+        runHistoryIndex = runHistoryStates.length - 1;
+        var cap = getHistoryMax();
+        while (runHistoryStates.length > cap) {
+          runHistoryStates.shift();
+          runHistoryIndex--;
+        }
+        if (runHistoryStates.length === 0) runHistoryIndex = -1;
+        else if (runHistoryIndex < 0) runHistoryIndex = 0;
+        syncHistoryNavUi();
+      }
+
+      function applyRunSnapshot(snap) {
+        if (!snap || snap.version !== 1 || !snap.form) return;
+        historyRestoring = true;
+        try {
+          var fo = snap.form;
+          document.getElementById("fxy").value = String(fo.fxy ?? "");
+          document.getElementById("yExact").value = String(fo.yExact ?? "");
+          document.getElementById("y0").value = String(fo.y0 ?? "");
+          document.getElementById("x0").value = String(fo.x0 ?? "");
+          document.getElementById("x1").value = String(fo.x1 ?? "");
+          document.getElementById("h").value = String(fo.h ?? "");
+          var fp = document.getElementById("fPreset");
+          if (fp) fp.value = String(fo.fPreset ?? "");
+          var pm = document.getElementById("presetMeta");
+          if (pm) {
+            var pid = String(fo.fPreset || "");
+            pm.textContent = pid && PRESET_BY_ID[pid] ? PRESET_BY_ID[pid].note || "" : "";
+          }
+          run();
+        } finally {
+          historyRestoring = false;
+          syncHistoryNavUi();
+        }
+      }
+
+      function downloadJson(filename, obj) {
+        var blob = new Blob([JSON.stringify(obj, null, 2)], { type: "application/json" });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      function getEulerStateForFile() {
+        return captureRunSnapshot();
+      }
+
+      function applyEulerStateFromFile(state) {
+        if (!state || typeof state !== "object") throw new Error("Некорректный файл");
+        if (state.version !== 1 || !state.form) throw new Error("Неподдерживаемая версия файла (ожидается version: 1 и поле form)");
+        runHistoryStates = [];
+        runHistoryIndex = -1;
+        historyRestoring = true;
+        try {
+          var fo = state.form;
+          document.getElementById("fxy").value = String(fo.fxy ?? "");
+          document.getElementById("yExact").value = String(fo.yExact ?? "");
+          document.getElementById("y0").value = String(fo.y0 ?? "");
+          document.getElementById("x0").value = String(fo.x0 ?? "");
+          document.getElementById("x1").value = String(fo.x1 ?? "");
+          document.getElementById("h").value = String(fo.h ?? "");
+          var fp = document.getElementById("fPreset");
+          if (fp) fp.value = String(fo.fPreset ?? "");
+          var pm = document.getElementById("presetMeta");
+          if (pm) {
+            var pid = String(fo.fPreset || "");
+            pm.textContent = pid && PRESET_BY_ID[pid] ? PRESET_BY_ID[pid].note || "" : "";
+          }
+          run();
+        } finally {
+          historyRestoring = false;
+          syncHistoryNavUi();
+        }
       }
 
       function run() {
@@ -557,9 +979,97 @@
         }
         chart.data.datasets = datasets;
         chart.update();
+
+        if (isBootstrapRun) {
+          isBootstrapRun = false;
+        } else if (!historyRestoring) {
+          pushRunHistoryAfterSuccess();
+        }
+        syncHistoryNavUi();
       }
 
       document.getElementById("run").addEventListener("click", run);
+      buildPresetUi();
+      var fPresetEl = document.getElementById("fPreset");
+      if (fPresetEl) {
+        fPresetEl.addEventListener("change", function () {
+          applyPreset(this.value);
+        });
+      }
+      var fxyEl = document.getElementById("fxy");
+      if (fxyEl) {
+        fxyEl.addEventListener("input", function () {
+          if (fPresetEl && fPresetEl.value !== "") {
+            fPresetEl.value = "";
+            var pm = document.getElementById("presetMeta");
+            if (pm) pm.textContent = "";
+          }
+        });
+      }
+
+      var historyMaxEl = document.getElementById("historyMaxStates");
+      if (historyMaxEl) {
+        try {
+          var ls = localStorage.getItem(HISTORY_MAX_LS_KEY);
+          if (ls != null) {
+            var n = parseInt(ls, 10);
+            if (isFinite(n)) historyMaxEl.value = String(Math.max(1, Math.min(HISTORY_MAX_CAP, n)));
+          }
+        } catch (e) { /* ignore */ }
+        var onCap = function () {
+          trimHistoryToCap();
+          try {
+            localStorage.setItem(HISTORY_MAX_LS_KEY, String(getHistoryMax()));
+          } catch (e2) { /* ignore */ }
+        };
+        historyMaxEl.addEventListener("change", onCap);
+        historyMaxEl.addEventListener("input", onCap);
+      }
+
+      var historyBackBtn = document.getElementById("historyBack");
+      var historyFwdBtn = document.getElementById("historyFwd");
+      if (historyBackBtn) {
+        historyBackBtn.addEventListener("click", function () {
+          if (runHistoryIndex <= 0) return;
+          runHistoryIndex -= 1;
+          applyRunSnapshot(runHistoryStates[runHistoryIndex]);
+        });
+      }
+      if (historyFwdBtn) {
+        historyFwdBtn.addEventListener("click", function () {
+          if (runHistoryIndex < 0 || runHistoryIndex >= runHistoryStates.length - 1) return;
+          runHistoryIndex += 1;
+          applyRunSnapshot(runHistoryStates[runHistoryIndex]);
+        });
+      }
+
+      document.getElementById("saveStateBtn").addEventListener("click", function () {
+        var stamp = new Date().toISOString().replace(/[:.]/g, "-");
+        downloadJson("euler-ode-form-" + stamp + ".json", getEulerStateForFile());
+      });
+      document.getElementById("loadStateBtn").addEventListener("click", function () {
+        document.getElementById("stateFile").click();
+      });
+      document.getElementById("stateFile").addEventListener("change", function (ev) {
+        var input = ev.target;
+        var f = input.files && input.files[0];
+        if (!f) return;
+        var reader = new FileReader();
+        reader.onload = function () {
+          try {
+            applyEulerStateFromFile(JSON.parse(String(reader.result)));
+          } catch (e) {
+            alert(String(e && e.message ? e.message : e));
+          }
+        };
+        reader.onerror = function () {
+          alert("Не удалось прочитать файл.");
+        };
+        reader.readAsText(f);
+        input.value = "";
+      });
+
+      syncHistoryNavUi();
       window.addEventListener("load", function () {
         try { run(); } catch (e) { /* ignore first paint errors */ }
       });
