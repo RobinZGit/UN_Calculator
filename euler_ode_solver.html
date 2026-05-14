@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
-  <title>Метод Эйлера: явный и неявный</title>
+  <title>ОДУ: Эйлер, Рунге–Кутта, Розенброк</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
     :root {
@@ -156,6 +156,47 @@
       margin-top: 0.5rem;
     }
     .dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 0.35rem; vertical-align: middle; }
+    .method-toggles-wrap {
+      margin-top: 0.65rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+    .method-toggles-hint {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 0.45rem;
+      opacity: 0.92;
+    }
+    .method-toggles {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.65rem 1.15rem;
+      align-items: center;
+    }
+    .method-toggle-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      cursor: pointer;
+      user-select: none;
+    }
+    .method-toggle-row input[type="checkbox"] {
+      width: auto;
+      margin: 0;
+      cursor: pointer;
+      accent-color: var(--accent);
+    }
+    .method-toggle-row .method-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    .method-toggle-row .method-name {
+      cursor: help;
+      border-bottom: 1px dotted rgba(139, 156, 179, 0.5);
+      color: var(--text);
+    }
     details.parse-help {
       margin-top: 1rem;
       padding: 0.75rem 1rem;
@@ -205,8 +246,8 @@
   <header>
     <div class="header-top">
       <div>
-        <h1>ДУ первого порядка: явный и неявный метод Эйлера</h1>
-        <div class="sub">y′ = f(x, y). Строка <strong>нормализуется</strong> (см. ниже), затем выполняется как JavaScript: <code>x</code>, <code>y</code> или только <code>x</code>; <code>Math.*</code>; «школьные» обозначения: <code>sh</code>/<code>ch</code>/<code>csh</code>/<code>th</code>, <code>sch</code>/<code>cth</code>/<code>csch</code>, <code>ln</code>/<code>lg</code>/<code>lb</code>, <code>log10</code>/<code>log2</code> и т.д.</div>
+        <h1>ДУ первого порядка: Эйлер, Рунге–Кутта и Розенброк</h1>
+        <div class="sub">y′ = f(x, y). На графике <strong>одновременно</strong>: явный и неявный Эйлер, RK4, метод Хойна (RK2), линейно-неявный шаг Розенброка–Эйлера (численный ∂f/∂y); если f <strong>не зависит от y</strong>, дополнительно — дискретный ряд B(z)/(1−z) на той же сетке (без полиномиальной подгонки f). Строка <strong>нормализуется</strong> (см. ниже), затем выполняется как JavaScript: <code>x</code>, <code>y</code>; <code>Math.*</code>; «школьные» обозначения: <code>sh</code>/<code>ch</code>/<code>csh</code>/<code>th</code>, <code>sch</code>/<code>cth</code>/<code>csch</code>, <code>ln</code>/<code>lg</code>/<code>lb</code>, <code>log10</code>/<code>log2</code> и т.д.</div>
       </div>
       <div class="header-tools" aria-label="История расчётов и файл состояния">
         <label for="historyMaxStates">Шагов истории</label>
@@ -285,37 +326,68 @@
       <div class="chart-wrap">
         <canvas id="chart"></canvas>
       </div>
-      <div class="hint legend-inline">
-        <span class="dot" style="background: rgb(63, 185, 80);"></span>явный Эйлер
-        <span class="dot" style="background: rgb(210, 153, 34); margin-left: 0.5rem;"></span>неявный Эйлер
-        <span class="dot" style="background: rgb(136, 146, 176); margin-left: 0.5rem;"></span>точное (если задано)
+      <div class="method-toggles-wrap">
+        <div class="method-toggles-hint">Галочки включают или скрывают кривую. Наведите курсор на название метода — краткое описание шага.</div>
+        <div id="chartLegendToggles" class="method-toggles" role="group" aria-label="Видимость рядов на графике"></div>
       </div>
     </div>
   </main>
 
   <script>
+    /**
+     * Изоляция кода в IIFE: не засоряем глобальную область, все функции и состояние страницы — внутри замыкания.
+     */
     (function () {
-      /** Временная подстановка для Math., чтобы не вставлять * внутри «Math». */
+      /**
+       * Служебный символ-заглушка: на время вставки неявного умножения все вхождения «Math.» заменяются на него,
+       * чтобы алгоритм не воспринимал точку в «Math.» как десятичную и не ломал имена функций.
+       * @type {string}
+       */
       var MATH_SENTINEL = "\uE000";
-      /** Преамбула к телу: cth/sch/csch — нет в Math, остальное подставляется в строке. */
+      /**
+       * Строка, которая вставляется перед `return (...)` в скомпилированной функции: гиперболические cth/sch/csch
+       * в стандартном JavaScript отсутствуют, поэтому задаются как локальные функции в теле выражения.
+       * @type {string}
+       */
       var MATH_PRELUDE =
         "var cth=function(z){return 1/Math.tanh(z);};" +
         "var sch=function(z){return 1/Math.cosh(z);};" +
         "var csch=function(z){return 1/Math.sinh(z);};";
 
+      /**
+       * Удаляет все пробельные символы в выражении пользователя — «школьная» запись без пробелов допустима.
+       * @param {string} s
+       * @returns {string}
+       */
       function stripSpaces(s) {
         return String(s || "").trim().replace(/\s+/g, "");
       }
 
+      /**
+       * Проверка: символ — десятичная цифра (для разбора чисел и экспоненциальной записи).
+       * @param {string} c один символ
+       * @returns {boolean}
+       */
       function isDigit(c) {
         return c >= "0" && c <= "9";
       }
 
+      /**
+       * Проверка: символ может начинать идентификатор в смысле JS (буква, $, _).
+       * @param {string} c один символ
+       * @returns {boolean}
+       */
       function isLetter(c) {
         return /[a-zA-Z$_]/.test(c);
       }
 
-      /** true, если на позиции i цифра и s[i+1..] — экспонента вида e±123 */
+      /**
+       * Определяет, что подстрока начиная с индекса i — это мантисса с экспонентой вида 1e-6, а не умножение на e.
+       * Нужно, чтобы не вставлять `*` между цифрой и `e` в научной записи числа.
+       * @param {string} s строка без пробелов
+       * @param {number} i индекс последней цифры мантиссы
+       * @returns {boolean}
+       */
       function isScientificExponentAt(s, i) {
         if (!isDigit(s[i])) return false;
         if (s[i + 1] !== "e" && s[i + 1] !== "E") return false;
@@ -324,7 +396,13 @@
         return j < s.length && isDigit(s[j]);
       }
 
-      /** true, если с позиции i+1 начинается «школьное» имя функции (после strip, до замены на Math). */
+      /**
+       * Нужно ли вставить `*` перед «школьным» именем функции (ln, sh, lg…) после ), цифры, x или y.
+       * @param {string} L символ слева от позиции вставки
+       * @param {string} s полная строка
+       * @param {number} i индекс символа L
+       * @returns {boolean}
+       */
       function needsImplicitStarBeforeFunc(L, s, i) {
         if (!(L === ")" || isDigit(L) || L === "x" || L === "y")) return false;
         var r = s.substr(i + 1);
@@ -336,8 +414,10 @@
       }
 
       /**
-       * Вставляет явное умножение * там, где в «школьной» записи оно подразумевается.
+       * Вставляет явное умножение * там, где в «школьной» записи оно подразумивается.
+       * Обходит строку слева направо, после каждого символа спрашивает needsImplicitStar.
        * @param {string} s — без пробелов, ^ уже заменены на **, Math. заменены на sentinel.
+       * @returns {string}
        */
       function insertImplicitMultiply(s) {
         var out = [];
@@ -352,6 +432,15 @@
         return out.join("");
       }
 
+      /**
+       * Решает, нужно ли вставить символ `*` между соседними символами L и R в позиции i (после нормализации ^ и Math.).
+       * Реализует правила неявного умножения: 2x, (a)(b), x(, x y, 2sin(x) и т.д., с исключениями для Math. и 1e-3.
+       * @param {string} L символ слева
+       * @param {string} R символ справа
+       * @param {string} s полная строка
+       * @param {number} i индекс L
+       * @returns {boolean}
+       */
       function needsImplicitStar(L, R, s, i) {
         if (L === MATH_SENTINEL || R === MATH_SENTINEL) {
           if (R === MATH_SENTINEL) {
@@ -386,7 +475,13 @@
         return false;
       }
 
-      /** Нормализация перед компиляцией в JS. */
+      /**
+       * Полный конвейер подготовки строки пользователя к исполняемому фрагменту JavaScript:
+       * удаление пробелов, замена ^ на **, замена школьных имён функций на Math.* / cth/sch/csch,
+       * маскировка Math., вставка неявных `*`, восстановление Math.
+       * @param {string} raw исходное выражение из поля ввода
+       * @returns {string} тело для обёртки return ( ... );
+       */
       function preprocessMathExpr(raw) {
         var s = stripSpaces(raw);
         if (!s) return "";
@@ -410,9 +505,11 @@
       }
 
       /**
-       * @param {string} body
-       * @param {string[]} params
-       * @returns {{ fn: Function, expanded: string }}
+       * Компилирует нормализованное выражение в функцию через `new Function` с заданным списком аргументов.
+       * К телу добавляется MATH_PRELUDE и `return (...)` для безопасного вычисления как выражения.
+       * @param {string} body текст f(x,y) или y(x)
+       * @param {string[]} params имена аргументов, например ["x","y"] или ["x"]
+       * @returns {{ fn: Function, expanded: string }} fn — вызываемая функция, expanded — нормализованная строка для превью
        */
       function compileFn(body, params) {
         body = String(body || "").trim();
@@ -430,7 +527,16 @@
         }
       }
 
-      /** @param {(x:number,y:number)=>number} f */
+      /**
+       * Явный метод Эйлера (форвард): на каждом шаге y_{n+1} = y_n + h·f(x_n, y_n).
+       * Поддерживает интегрирование вперёд и назад (знак шага по направлению к xEnd).
+       * @param {(x:number,y:number)=>number} f правая часть ODE
+       * @param {number} xStart начало по x
+       * @param {number} xEnd конец по x
+       * @param {number} y0 начальное условие в xStart
+       * @param {number} h шаг (берётся по модулю, направление из интервала)
+       * @returns {{ xs: number[], ys: number[] }} узлы сетки
+       */
       function explicitEuler(f, xStart, xEnd, y0, h) {
         const xs = [];
         const ys = [];
@@ -443,8 +549,10 @@
         ys.push(y);
         const guard = 1e7;
         let n = 0;
+        /* Условие цикла: «ещё не дошли» до xEnd в выбранном направлении (учёт численной погрешности). */
         while (dir * (xEnd - x) > 1e-15 * Math.max(1, Math.abs(xEnd))) {
           if (++n > guard) throw new Error("Слишком много шагов; уменьшите интервал или увеличьте шаг.");
+          /* Укороченный последний шаг, чтобы закончить ровно в xEnd, а не перепрыгнуть. */
           const step = Math.abs(xEnd - x) < Math.abs(hh) ? (xEnd - x) : hh;
           y = y + step * f(x, y);
           x = x + step;
@@ -455,24 +563,32 @@
       }
 
       /**
-       * Неявный Эйлер: y_{n+1} = y_n + h * f(x_{n+1}, y_{n+1})
-       * Решаем F(y)=0 методом Ньютона с численной производной.
+       * Один шаг неявного метода Эйлера: ищем y такое, что y = yPrev + h·f(xNext, y).
+       * Нелинейное уравнение F(y)=0 решается методом Ньютона; производная F'(y) оценивается конечной разностью.
        * @param {(x:number,y:number)=>number} f
+       * @param {number} xNext значение x на правом конце шага (в f подставляется именно эта точка по x)
+       * @param {number} yPrev значение y до шага
+       * @param {number} h длина шага (может быть отрицательной при интегрировании назад)
+       * @returns {number} приближённое y на новом слое
        */
       function implicitEulerStep(f, xNext, yPrev, h) {
         const tol = 1e-10;
         const maxIt = 80;
         const eps = 1e-8;
+        /** Резидуал нелинейного уравнения для неявного Эйлера: y - yPrev - h f(xNext, y) = 0. */
         function F(y) {
           return y - yPrev - h * f(xNext, y);
         }
         const xCur = xNext - h;
+        /* Начальное приближение: один шаг явного Эйлера от (xNext-h, yPrev) — обычно в бассейне сходимости Ньютона. */
         let y = yPrev + h * f(xCur, yPrev);
         for (let k = 0; k < maxIt; k++) {
           const Fv = F(y);
           if (Math.abs(Fv) < tol) return y;
+          /* Производная F'(y) = 1 - h * ∂f/∂y (здесь ∂f/∂y численно). */
           const Fp = (F(y + eps) - F(y - eps)) / (2 * eps);
           if (!isFinite(Fp) || Math.abs(Fp) < 1e-14) {
+            /* Деградация к методу Ньютона–Рафсона с единичной производной (шаг = -F), если численная F' ненадёжна. */
             y = y - Fv;
           } else {
             y = y - Fv / Fp;
@@ -482,7 +598,16 @@
         throw new Error("Неявный Эйлер: не сошёлся Ньютон за " + maxIt + " итераций.");
       }
 
-      /** @param {(x:number,y:number)=>number} f */
+      /**
+       * Неявный (обратный) метод Эйлера по всему интервалу: на каждом шаге решается нелинейное уравнение
+       * относительно y на правом конце шага. Устойчивее явного на затухающих линейных задачах при большом |hλ|.
+       * @param {(x:number,y:number)=>number} f
+       * @param {number} xStart
+       * @param {number} xEnd
+       * @param {number} y0
+       * @param {number} h
+       * @returns {{ xs: number[], ys: number[] }}
+       */
       function implicitEuler(f, xStart, xEnd, y0, h) {
         const xs = [];
         const ys = [];
@@ -495,6 +620,7 @@
         ys.push(y);
         const guard = 1e7;
         let n = 0;
+        /* Та же сетка по x, что и у явного Эйлера; на каждом шаге — нелинейное уравнение на y_new. */
         while (dir * (xEnd - x) > 1e-15 * Math.max(1, Math.abs(xEnd))) {
           if (++n > guard) throw new Error("Слишком много шагов; уменьшите интервал или увеличьте шаг.");
           const step = Math.abs(xEnd - x) < Math.abs(hh) ? (xEnd - x) : hh;
@@ -507,7 +633,204 @@
         return { xs, ys };
       }
 
+      /**
+       * Универсальный шаговый интегратор с фиксированным модулем шага |h| и направлением к xEnd.
+       * Конкретная одношаговая схема задаётся callback stepFn(f, x, y, step) → новое y (шаг уже подобран к границе).
+       * @param {(x:number,y:number)=>number} f правая часть
+       * @param {number} xStart
+       * @param {number} xEnd
+       * @param {number} y0
+       * @param {number} h пользовательский шаг (знак направления выводится из интервала)
+       * @param {(f:function, x:number, y:number, step:number)=>number} stepFn возвращает y после шага длины step
+       * @returns {{ xs: number[], ys: number[] }}
+       */
+      function integrateODE(f, xStart, xEnd, y0, h, stepFn) {
+        const xs = [];
+        const ys = [];
+        let x = xStart;
+        let y = y0;
+        const dir = xEnd >= xStart ? 1 : -1;
+        const hh = Math.abs(h) * dir;
+        if (hh === 0) throw new Error("Шаг h не может быть нулём.");
+        xs.push(x);
+        ys.push(y);
+        const guard = 1e7;
+        let n = 0;
+        /* Каркас совпадает с явным Эйлером; шаговая формула целиком делегирована stepFn. */
+        while (dir * (xEnd - x) > 1e-15 * Math.max(1, Math.abs(xEnd))) {
+          if (++n > guard) throw new Error("Слишком много шагов; уменьшите интервал или увеличьте шаг.");
+          const step = Math.abs(xEnd - x) < Math.abs(hh) ? (xEnd - x) : hh;
+          y = stepFn(f, x, y, step);
+          x = x + step;
+          xs.push(x);
+          ys.push(y);
+        }
+        return { xs, ys };
+      }
+
+      /**
+       * Один шаг классического явного RK4 (стандартная таблица Бутчера порядка 4): четыре оценки k1…k4 наклона,
+       * итог y + (k1 + 2k2 + 2k3 + k4)/6.
+       * @param {(x:number,y:number)=>number} f
+       * @param {number} x текущий x
+       * @param {number} y текущий y
+       * @param {number} h длина шага
+       * @returns {number} y_new
+       */
+      function rk4Step(f, x, y, h) {
+        const k1 = h * f(x, y);
+        const k2 = h * f(x + h * 0.5, y + k1 * 0.5);
+        const k3 = h * f(x + h * 0.5, y + k2 * 0.5);
+        const k4 = h * f(x + h, y + k3);
+        /* Симметричные веса 1/6, 2/6, 2/6, 1/6 — классическая формула Simpson по стадиям RK. */
+        return y + (k1 + 2 * k2 + 2 * k3 + k4) / 6;
+      }
+
+      /**
+       * Один шаг метода Хойна (улучшенный Эйлер / RK2 второго порядка): среднее наклонов в начале и в конце пробного шага.
+       * @param {(x:number,y:number)=>number} f
+       * @param {number} x
+       * @param {number} y
+       * @param {number} h
+       * @returns {number}
+       */
+      function rk2HeunStep(f, x, y, h) {
+        const k1 = h * f(x, y);
+        const k2 = h * f(x + h, y + k1);
+        /* Предиктор-корректор: половина суммы наклонов в (x,y) и в (x+h, y+k1). */
+        return y + 0.5 * (k1 + k2);
+      }
+
+      /**
+       * Численная производная ∂f/∂y в точке (x, y) симметричной разностью (центральная формула O(ε²)).
+       * Используется в линейно-неявных схемах Розенброка для скалярного уравнения.
+       * @param {(x:number,y:number)=>number} f
+       * @param {number} x
+       * @param {number} y
+       * @returns {number}
+       */
+      function dfdyNumerical(f, x, y) {
+        const eps = 1e-8;
+        /* Центральная разность O(ε²); ε не должен быть слишком мал из-за ошибок округления с плавающей точкой. */
+        return (f(x, y + eps) - f(x, y - eps)) / (2 * eps);
+      }
+
+      /**
+       * Линейно-неявный шаг Розенброка–Эйлера (одна стадия, γ = 1) для скалярной задачи y' = f(x, y):
+       * y_{n+1} = y_n + h f(x_n, y_n) / (1 - h ∂f/∂y|_{x_n,y_n}).
+       * Для линейной f = λy совпадает с неявным Эйлером; для нелинейной f — локальная линеаризация в знаменателе.
+       * @param {(x:number,y:number)=>number} f
+       * @param {number} x
+       * @param {number} y
+       * @param {number} h
+       * @returns {number}
+       */
+      function rosenbrockEulerStep(f, x, y, h) {
+        const fy = dfdyNumerical(f, x, y);
+        if (!isFinite(fy)) throw new Error("Розенброк–Эйлер: не удалось оценить ∂f/∂y.");
+        const denom = 1 - h * fy;
+        if (Math.abs(denom) < 1e-14) throw new Error("Розенброк–Эйлер: |1 - h·∂f/∂y| слишком мало.");
+        /* Эквивалентно одному шагу с замороженным якобианом; для f=λy даёт неявный Эйлер. */
+        return y + (h * f(x, y)) / denom;
+      }
+
+      /**
+       * Проверяет, что f(x, y) фактически не зависит от y: на нескольких x и разных y значения совпадают с допуском.
+       * Тогда задача сводится к y′ = f(x), и имеет смысл дискретное «деление ряда» на (1−z) по сетке.
+       * @param {(x:number,y:number)=>number} f
+       * @param {number} x0
+       * @param {number} x1
+       * @returns {boolean}
+       */
+      function rhsDependsOnlyOnX(f, x0, x1) {
+        var lo = Math.min(x0, x1);
+        var hi = Math.max(x0, x1);
+        if (!isFinite(lo) || !isFinite(hi) || hi === lo) return false;
+        var yVals = [0, 1, -1, 0.25, 2];
+        for (var s = 0; s <= 12; s++) {
+          var x = lo + ((hi - lo) * s) / 12;
+          var ref = f(x, 0);
+          if (!isFinite(ref)) return false;
+          var scale = 1 + Math.abs(ref);
+          for (var a = 0; a < yVals.length; a++) {
+            for (var b = a + 1; b < yVals.length; b++) {
+              var va = f(x, yVals[a]);
+              var vb = f(x, yVals[b]);
+              if (!isFinite(va) || !isFinite(vb)) return false;
+              if (Math.abs(va - vb) > 1e-9 * scale) return false;
+            }
+          }
+        }
+        return true;
+      }
+
+      /**
+       * Только для y′ = f(x): на уже построенной сетке узлов xs (как у явного Эйлера) задаём дискретный ряд
+       * B(z) = Σᵢ bᵢ zⁱ, где bᵢ = (xᵢ₊₁−xᵢ)·f(xᵢ) — «многочлен» в формальных степенях сдвига по индексу узла.
+       * Кумулятивные суммы Σᵢ₌₀ⁿ⁻¹ bᵢ — это коэффициенты при zⁿ⁻¹ в формальном произведении B(z)·(1+z+z²+⋯), т.е. B(z)/(1−z) в кольце степенных рядов (деление на дискретный «(1−z)»).
+       * Тогда yₙ = y₀ + эта сумма — интеграл левыми прямоугольниками по той же сетке; аппроксимация f отдельным многочленом не используется.
+       * @param {(x:number,y:number)=>number} f
+       * @param {number[]} xs узлы по x (монотонно в сторону интегрирования)
+       * @param {number} y0 значение в xs[0]
+       * @returns {{ xs: number[], ys: number[] }}
+       */
+      function integrateDiscreteSeriesDivideOneMinusZ(f, xs, y0) {
+        var ys = [];
+        var acc = 0;
+        ys.push(y0);
+        for (var k = 1; k < xs.length; k++) {
+          var dx = xs[k] - xs[k - 1];
+          var fi = f(xs[k - 1], 0);
+          if (!isFinite(fi)) throw new Error("Дискретный ряд P/(1−z): f(x) не конечно в узле сетки.");
+          acc += dx * fi;
+          ys.push(y0 + acc);
+        }
+        return { xs: xs.slice(), ys: ys };
+      }
+
+      /**
+       * Тексты подсказок (атрибут title и второй ряд тултипа Chart.js). Ключи должны совпадать с dataset.label.
+       * @type {Object.<string, string>}
+       */
+      var METHOD_HINTS = {
+        "Явный Эйлер":
+          "Шаг: yₙ₊₁ = yₙ + h·f(xₙ, yₙ). Наклон в левом конце отрезка; метод 1-го порядка, на жёстких задачах нужен мелкий шаг.",
+        "Неявный Эйлер":
+          "Шаг: yₙ₊₁ = yₙ + h·f(xₙ₊₁, yₙ₊₁) — на новой точке; уравнение по yₙ₊₁ решается итерациями. Устойчивее явного на затухающих моделях.",
+        "RK4 (классический)":
+          "Четыре оценки наклона на шаге и взвешенное среднее (порядок 4): обычно заметно точнее Эйлера при том же h.",
+        "Хойн (RK2)":
+          "Две стадии RK: наклон в начале и «пробный» конец шага, затем среднее (идея трапеций), порядок 2.",
+        "Розенброк–Эйлер":
+          "Линейно-неявный шаг с учётом ∂f/∂y в знаменателе (здесь ∂f/∂y численно). Удобен на жёстких скалярных уравнениях.",
+        "Дискретный ряд: B(z)/(1−z)":
+          "Только если y′=f(x): bᵢ=(xᵢ₊₁−xᵢ)f(xᵢ), ряд B(z)=Σ bᵢzⁱ; кумулятивные суммы — коэффициенты B(z)/(1−z). То же, что ∫ левыми прямоугольниками на этой сетке, без аппроксимации f многочленом.",
+        "Точное y(x)":
+          "Не численный интегратор: значения вашей формулы y(x) на плотной сетке по x для сравнения с методами."
+      };
+
+      /**
+       * Возвращает текст подсказки для названия метода (ряда на графике).
+       * @param {string} label значение dataset.label
+       * @returns {string} пустая строка, если для label нет заранее заданного текста
+       */
+      function methodHintByLabel(label) {
+        return METHOD_HINTS[label] || "";
+      }
+
+      /** Экземпляр Chart.js для canvas #chart; пересоздаётся в ensureChart при каждом успешном run. */
       let chart;
+      /**
+       * Запомненная видимость рядов по подписи (label), чтобы при новом расчёте сохранить состояние галочек.
+       * true — показывать, false — скрыть; отсутствующий ключ — по умолчанию видим.
+       * @type {Object.<string, boolean>}
+       */
+      var legendVisibilityByLabel = {};
+
+      /**
+       * Создаёт или пересоздаёт график: уничтожает старый экземпляр, чтобы не накапливать слушателей и память.
+       * Легенда Chart отключена — подписи и видимость рядов реализованы внешним HTML (rebuildChartLegendToggles).
+       */
       function ensureChart() {
         const ctx = document.getElementById("chart").getContext("2d");
         if (chart) chart.destroy();
@@ -519,9 +842,28 @@
             maintainAspectRatio: false,
             interaction: { mode: "index", intersect: false },
             plugins: {
-              legend: { labels: { color: "#c9d1d9" } },
-              title: { display: true, text: "Сравнение решений", color: "#8b9cb3" }
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  /**
+                   * Формирует строки тултипа: значение ряда и при наличии — вторую строку с описанием метода.
+                   * @param {*} ctx контекст элемента тултипа Chart.js (dataset, parsed и т.д.)
+                   * @returns {string|string[]}
+                   */
+                  label: function (ctx) {
+                    var ds = ctx.dataset;
+                    var hint = methodHintByLabel(ds.label || "");
+                    var v = ctx.parsed.y;
+                    var main =
+                      (ds.label || "y") +
+                      (v !== undefined && v !== null && isFinite(v) ? ": " + v : "");
+                    return hint ? [main, hint] : main;
+                  }
+                }
+              },
+              title: { display: true, text: "Эйлер, РК, Розенброк, дискретный ряд (если y′=f(x)) и эталон", color: "#8b9cb3" }
             },
+            /* Линейные оси: данные в формате {x, y} (см. toPoints), не категориальные подписи. */
             scales: {
               x: {
                 type: "linear",
@@ -539,11 +881,76 @@
         });
       }
 
+      /**
+       * Восстанавливает флаг hidden на наборах данных из legendVisibilityByLabel (перед chart.update).
+       * @param {Object[]} datasets массив конфигов Chart.js для линий
+       */
+      function applySavedLegendVisibilityToDatasets(datasets) {
+        for (var i = 0; i < datasets.length; i++) {
+          var ds = datasets[i];
+          var lab = ds.label;
+          if (lab && Object.prototype.hasOwnProperty.call(legendVisibilityByLabel, lab)) {
+            ds.hidden = !legendVisibilityByLabel[lab];
+          }
+        }
+      }
+
+      /**
+       * Перестраивает блок #chartLegendToggles: для каждого dataset — чекбокс видимости, цветной квадрат, подпись.
+       * Состояние чекбокса берётся из chart после применения сохранённой видимости; при change — запись в legendVisibilityByLabel.
+       */
+      function rebuildChartLegendToggles() {
+        var host = document.getElementById("chartLegendToggles");
+        if (!host || !chart) return;
+        host.innerHTML = "";
+        for (var i = 0; i < chart.data.datasets.length; i++) {
+          /* IIFE фиксирует idx для обработчика change (иначе все ссылки укажут на последнее i). */
+          (function (idx) {
+            var ds = chart.data.datasets[idx];
+            var hint = methodHintByLabel(ds.label || "");
+            var row = document.createElement("label");
+            row.className = "method-toggle-row";
+            row.title = hint;
+            var cb = document.createElement("input");
+            cb.type = "checkbox";
+            cb.checked = chart.isDatasetVisible(idx);
+            var dot = document.createElement("span");
+            dot.className = "method-dot";
+            dot.style.background = ds.borderColor || "#888";
+            dot.title = hint;
+            var name = document.createElement("span");
+            name.className = "method-name";
+            name.textContent = ds.label || "Ряд " + (idx + 1);
+            name.title = hint;
+            cb.addEventListener("change", function () {
+              var d = chart.data.datasets[idx];
+              if (d && d.label) legendVisibilityByLabel[d.label] = cb.checked;
+              chart.setDatasetVisibility(idx, cb.checked);
+              chart.update();
+            });
+            row.appendChild(cb);
+            row.appendChild(dot);
+            row.appendChild(name);
+            host.appendChild(row);
+          })(i);
+        }
+      }
+
+      /**
+       * Преобразует массивы координат в формат точек Chart.js (ось x — линейная, не «category»).
+       * @param {number[]} xs
+       * @param {number[]} ys
+       * @returns {{x:number,y:number}[]}
+       */
       function toPoints(xs, ys) {
         return xs.map((x, i) => ({ x, y: ys[i] }));
       }
 
-      /** Готовые f(x,y) и параметры: мягкие, жёсткие (stiff), классические нелинейные. */
+      /**
+       * Каталог готовых примеров ОДУ: группы с заголовком и списком объектов { id, label, f, yExact, y0, x0, x1, h, note }.
+       * Используется только на клиенте для заполнения select и быстрого переключения параметров.
+       * @type {{title:string, items:Object[]}[]}
+       */
       var PRESET_GROUPS = [
         {
           title: "Классика (мягкие, учебные)",
@@ -672,8 +1079,16 @@
         }
       ];
 
+      /**
+       * Быстрый доступ к пресету по id (заполняется в buildPresetUi при обходе PRESET_GROUPS).
+       * @type {Object.<string, {id:string,label:string,f:string,yExact:string,y0:number,x0:number,x1:number,h:number,note:string}>}
+       */
       var PRESET_BY_ID = {};
 
+      /**
+       * Заполняет выпадающий список #fPreset: первая опция «своя f», затем optgroup по разделам PRESET_GROUPS.
+       * Параллельно наполняет словарь PRESET_BY_ID для applyPreset и подсказки presetMeta.
+       */
       function buildPresetUi() {
         var sel = document.getElementById("fPreset");
         if (!sel) return;
@@ -682,6 +1097,7 @@
         opt0.value = "";
         opt0.textContent = "— Своя f(x,y) (ручной ввод ниже) —";
         sel.appendChild(opt0);
+        /* Внешний цикл — группы (классика, stiff, …); внутренний — конкретные примеры с регистрацией в PRESET_BY_ID. */
         for (var g = 0; g < PRESET_GROUPS.length; g++) {
           var grp = PRESET_GROUPS[g];
           var og = document.createElement("optgroup");
@@ -698,6 +1114,10 @@
         }
       }
 
+      /**
+       * Подставляет в поля формы значения выбранного пресета и обновляет блок пояснения #presetMeta.
+       * @param {string} id ключ из PRESET_BY_ID или пустая строка (только очистка meta)
+       */
       function applyPreset(id) {
         var meta = document.getElementById("presetMeta");
         if (!meta) return;
@@ -716,15 +1136,31 @@
       }
 
       /** --- История успешных расчётов и сохранение формы в файл --- */
+      /** Ключ localStorage для запоминания лимита длины истории между визитами. */
       var HISTORY_MAX_LS_KEY = "euler_ode_history_max";
+      /** Значение по умолчанию для поля «шагов истории», если localStorage пуст. */
       var HISTORY_MAX_DEFAULT = 100;
+      /** Верхняя граница лимита (защита от ввода огромного числа). */
       var HISTORY_MAX_CAP = 500;
+      /** Массив снимков формы после успешных run(); индекс runHistoryIndex указывает «текущий» для навигации. */
       var runHistoryStates = [];
+      /** Индекс в runHistoryStates для кнопок «назад» / «вперёд» (-1 если история пуста). */
       var runHistoryIndex = -1;
+      /**
+       * Флаг: при восстановлении из истории или из файла не добавляем новый снимок в конец истории
+       * и не обрезаем ветку «будущего» при ложных срабатываниях.
+       */
       var historyRestoring = false;
-      /** Первый автозапуск run() при загрузке страницы не пишет в историю. */
+      /**
+       * Первый вызов run() при загрузке страницы (window load) не считается пользовательским расчётом:
+       * в историю не пишем, чтобы не засорять её автопостроением графика по умолчанию.
+       */
       var isBootstrapRun = true;
 
+      /**
+       * Читает лимит числа хранимых снимков из поля #historyMaxStates с ограничением [1, HISTORY_MAX_CAP].
+       * @returns {number}
+       */
       function getHistoryMax() {
         var el = document.getElementById("historyMaxStates");
         var v = el ? parseInt(String(el.value), 10) : HISTORY_MAX_DEFAULT;
@@ -732,6 +1168,44 @@
         return Math.max(1, Math.min(HISTORY_MAX_CAP, v));
       }
 
+      /**
+       * Копия объекта видимости рядов (галочки графика) для сохранения в JSON и в истории.
+       * @returns {Object.<string, boolean>}
+       */
+      function cloneLegendVisibilityForSave() {
+        var out = {};
+        for (var k in legendVisibilityByLabel) {
+          if (!Object.prototype.hasOwnProperty.call(legendVisibilityByLabel, k)) continue;
+          if (typeof legendVisibilityByLabel[k] === "boolean") out[k] = legendVisibilityByLabel[k];
+        }
+        return out;
+      }
+
+      /**
+       * Восстанавливает видимость рядов из снимка или файла.
+       * @param {{ legendVisibility?: Object.<string, boolean> }} snap
+       * @param {{ resetIfMissing?: boolean }} [opts] если resetIfMissing и поля legendVisibility нет — сброс в {} (все ряды видимы по умолчанию)
+       */
+      function applyLegendVisibilityFromSnapshot(snap, opts) {
+        opts = opts || {};
+        if (!snap || typeof snap !== "object") return;
+        if (typeof snap.legendVisibility !== "object" || snap.legendVisibility === null) {
+          if (opts.resetIfMissing) legendVisibilityByLabel = {};
+          return;
+        }
+        var next = {};
+        var src = snap.legendVisibility;
+        for (var k in src) {
+          if (!Object.prototype.hasOwnProperty.call(src, k)) continue;
+          if (typeof src[k] === "boolean") next[k] = src[k];
+        }
+        legendVisibilityByLabel = next;
+      }
+
+      /**
+       * Снимок текущих полей формы, пресета и видимости рядов на графике (для истории и JSON-файла).
+       * @returns {{ version: number, form: Object, legendVisibility: Object.<string, boolean> }}
+       */
       function captureRunSnapshot() {
         var fp = document.getElementById("fPreset");
         return {
@@ -744,10 +1218,14 @@
             x1: document.getElementById("x1").value,
             h: document.getElementById("h").value,
             fPreset: fp ? fp.value : ""
-          }
+          },
+          legendVisibility: cloneLegendVisibilityForSave()
         };
       }
 
+      /**
+       * Включает/отключает кнопки «назад» и «вперёд» в зависимости от runHistoryIndex и длины runHistoryStates.
+       */
       function syncHistoryNavUi() {
         var back = document.getElementById("historyBack");
         var fwd = document.getElementById("historyFwd");
@@ -755,6 +1233,9 @@
         if (fwd) fwd.disabled = runHistoryIndex < 0 || runHistoryIndex >= runHistoryStates.length - 1;
       }
 
+      /**
+       * Если пользователь уменьшил лимит «шагов истории», удаляет старые записи с начала массива и сдвигает индекс.
+       */
       function trimHistoryToCap() {
         var cap = getHistoryMax();
         while (runHistoryStates.length > cap) {
@@ -767,6 +1248,10 @@
         syncHistoryNavUi();
       }
 
+      /**
+       * После успешного расчёта добавляет снимок в конец истории; если пользователь ранее откатился назад,
+       * «ветка вперёд» отбрасывается (как в типичном undo/redo стеке). Затем обрезка по лимиту getHistoryMax().
+       */
       function pushRunHistoryAfterSuccess() {
         if (historyRestoring) return;
         if (runHistoryIndex < runHistoryStates.length - 1) {
@@ -784,6 +1269,10 @@
         syncHistoryNavUi();
       }
 
+      /**
+       * Восстанавливает поля формы из снимка и пересчитывает график (run). Не добавляет запись в историю.
+       * @param {{ version:number, form:Object, legendVisibility?: Object.<string, boolean> }} snap объект из runHistoryStates
+       */
       function applyRunSnapshot(snap) {
         if (!snap || snap.version !== 1 || !snap.form) return;
         historyRestoring = true;
@@ -802,6 +1291,7 @@
             var pid = String(fo.fPreset || "");
             pm.textContent = pid && PRESET_BY_ID[pid] ? PRESET_BY_ID[pid].note || "" : "";
           }
+          applyLegendVisibilityFromSnapshot(snap, { resetIfMissing: false });
           run();
         } finally {
           historyRestoring = false;
@@ -809,6 +1299,11 @@
         }
       }
 
+      /**
+       * Скачивает JSON в браузере: создаёт Blob, временную ссылку object URL и программный клик по <a download>.
+       * @param {string} filename имя файла на диске пользователя
+       * @param {Object} obj сериализуемый объект
+       */
       function downloadJson(filename, obj) {
         var blob = new Blob([JSON.stringify(obj, null, 2)], { type: "application/json" });
         var url = URL.createObjectURL(blob);
@@ -821,10 +1316,20 @@
         URL.revokeObjectURL(url);
       }
 
+      /**
+       * Обёртка над captureRunSnapshot для кнопки «Сохранить в файл» (единый формат версии и поля form).
+       * @returns {{ version:number, form:Object }}
+       */
       function getEulerStateForFile() {
         return captureRunSnapshot();
       }
 
+      /**
+       * Загрузка состояния из JSON: валидация version и form, сброс истории, подстановка полей и run().
+       * Поле legendVisibility (если есть) восстанавливает галочки видимости кривых; если в старом файле его нет — все ряды считаются видимыми.
+       * История очищается, чтобы не смешивать старые снимки с новой задачей из файла.
+       * @param {*} state распарсенный JSON
+       */
       function applyEulerStateFromFile(state) {
         if (!state || typeof state !== "object") throw new Error("Некорректный файл");
         if (state.version !== 1 || !state.form) throw new Error("Неподдерживаемая версия файла (ожидается version: 1 и поле form)");
@@ -846,6 +1351,7 @@
             var pid = String(fo.fPreset || "");
             pm.textContent = pid && PRESET_BY_ID[pid] ? PRESET_BY_ID[pid].note || "" : "";
           }
+          applyLegendVisibilityFromSnapshot(state, { resetIfMissing: true });
           run();
         } finally {
           historyRestoring = false;
@@ -853,7 +1359,13 @@
         }
       }
 
+      /**
+       * Главный конвейер расчёта: читает поля формы, валидирует числа, компилирует f и (опционально) y(x),
+       * запускает все численные методы на одной сетке, строит Chart.js и обновляет превью нормализации.
+       * При ошибке на любом этапе пишет в #errorBox и выходит; при успехе обновляет историю (если не восстановление).
+       */
       function run() {
+        /* Сброс сообщения об ошибке с прошлого запуска. */
         const errBox = document.getElementById("errorBox");
         errBox.style.display = "none";
         errBox.textContent = "";
@@ -865,6 +1377,7 @@
         const h = Number(document.getElementById("h").value);
         const y0 = Number(document.getElementById("y0").value);
 
+        /* --- Проверка скалярных параметров интервала и шага --- */
         if (!isFinite(x0) || !isFinite(x1)) {
           errBox.textContent = "Введите корректные границы интервала.";
           errBox.style.display = "block";
@@ -884,6 +1397,7 @@
         var preview = document.getElementById("parsePreview");
         preview.textContent = "";
 
+        /* --- Компиляция f(x,y) --- */
         var f;
         var parseLines = [];
         try {
@@ -896,16 +1410,32 @@
           return;
         }
 
-        var exE, imE;
+        /* --- Численные траектории на одной сетке шага h --- */
+        var exE, imE, rk4Res, heunRes, roseRes;
         try {
           exE = explicitEuler(f, x0, x1, y0, h);
           imE = implicitEuler(f, x0, x1, y0, h);
+          rk4Res = integrateODE(f, x0, x1, y0, h, rk4Step);
+          heunRes = integrateODE(f, x0, x1, y0, h, rk2HeunStep);
+          roseRes = integrateODE(f, x0, x1, y0, h, rosenbrockEulerStep);
         } catch (e) {
           errBox.textContent = String(e.message || e);
           errBox.style.display = "block";
           return;
         }
 
+        /* Если f не зависит от y: кривая через формальное B(z)/(1−z) на узлах явного Эйлера. */
+        var discreteQuotRes = null;
+        if (rhsDependsOnlyOnX(f, x0, x1)) {
+          try {
+            discreteQuotRes = integrateDiscreteSeriesDivideOneMinusZ(f, exE.xs, y0);
+            parseLines.push("Доп.: y′=f(x) — дискретный ряд B(z)/(1−z) на сетке явного Эйлера (без полинома по f).");
+          } catch (eDisc) {
+            discreteQuotRes = null;
+          }
+        }
+
+        /* --- Опционально: плотная кривая «точного» решения y(x) для сравнения --- */
         var exactPts = null;
         if (exactBody) {
           var g;
@@ -918,6 +1448,7 @@
             errBox.style.display = "block";
             return;
           }
+          /* Число точек эталона: от 50 до 2000, грубо пропорционально длине интервала относительно h. */
           const nx = Math.min(2000, Math.max(50, Math.ceil(Math.abs(x1 - x0) / (Math.abs(h) * 0.25)) + 1));
           const xs = [];
           const ys = [];
@@ -945,6 +1476,7 @@
 
         preview.textContent = parseLines.join("\n");
 
+        /* --- Визуализация: пересоздание chart, набор datasets, чекбоксы легенды, история --- */
         ensureChart();
         const datasets = [
           {
@@ -964,9 +1496,49 @@
             tension: 0.1,
             pointRadius: 2,
             borderWidth: 2
+          },
+          {
+            label: "RK4 (классический)",
+            data: toPoints(rk4Res.xs, rk4Res.ys),
+            borderColor: "rgb(168, 85, 247)",
+            backgroundColor: "rgba(168, 85, 247, 0.12)",
+            tension: 0.1,
+            pointRadius: 2,
+            borderWidth: 2
+          },
+          {
+            label: "Хойн (RK2)",
+            data: toPoints(heunRes.xs, heunRes.ys),
+            borderColor: "rgb(236, 72, 153)",
+            backgroundColor: "rgba(236, 72, 153, 0.12)",
+            tension: 0.1,
+            pointRadius: 2,
+            borderWidth: 2
+          },
+          {
+            label: "Розенброк–Эйлер",
+            data: toPoints(roseRes.xs, roseRes.ys),
+            borderColor: "rgb(56, 189, 248)",
+            backgroundColor: "rgba(56, 189, 248, 0.12)",
+            tension: 0.1,
+            pointRadius: 2,
+            borderWidth: 2
           }
         ];
+        if (discreteQuotRes) {
+          datasets.push({
+            label: "Дискретный ряд: B(z)/(1−z)",
+            data: toPoints(discreteQuotRes.xs, discreteQuotRes.ys),
+            borderColor: "rgb(245, 158, 11)",
+            backgroundColor: "rgba(245, 158, 11, 0.14)",
+            tension: 0.1,
+            pointRadius: 2,
+            borderWidth: 2,
+            borderDash: [6, 3]
+          });
+        }
         if (exactPts) {
+          /* Ряд «точное» добавляется после численных кривых (и после дискретного B/(1−z), если он есть). */
           datasets.push({
             label: "Точное y(x)",
             data: exactPts,
@@ -977,9 +1549,12 @@
             borderWidth: 2
           });
         }
+        applySavedLegendVisibilityToDatasets(datasets);
         chart.data.datasets = datasets;
         chart.update();
+        rebuildChartLegendToggles();
 
+        /* Запись в историю: пропуск первого автозапуска и любого run() под флагом historyRestoring. */
         if (isBootstrapRun) {
           isBootstrapRun = false;
         } else if (!historyRestoring) {
@@ -988,6 +1563,10 @@
         syncHistoryNavUi();
       }
 
+      /**
+       * Навешивание обработчиков после объявления всех функций: расчёт, пресеты, история, файл, первый прогон.
+       * Порядок важен только для buildPresetUi (заполняет PRESET_BY_ID) до первого выбора пользователя.
+       */
       document.getElementById("run").addEventListener("click", run);
       buildPresetUi();
       var fPresetEl = document.getElementById("fPreset");
@@ -998,6 +1577,7 @@
       }
       var fxyEl = document.getElementById("fxy");
       if (fxyEl) {
+        /* Ручное редактирование f сбрасывает выбор пресета, чтобы не было рассинхрона подписи и поля. */
         fxyEl.addEventListener("input", function () {
           if (fPresetEl && fPresetEl.value !== "") {
             fPresetEl.value = "";
@@ -1007,6 +1587,7 @@
         });
       }
 
+      /* Лимит длины истории: синхронизация с localStorage и обрезка массива при уменьшении числа. */
       var historyMaxEl = document.getElementById("historyMaxStates");
       if (historyMaxEl) {
         try {
@@ -1028,6 +1609,7 @@
 
       var historyBackBtn = document.getElementById("historyBack");
       var historyFwdBtn = document.getElementById("historyFwd");
+      /* Навигация по стеку снимков: индекс меняется, затем полная перерисовка через applyRunSnapshot → run. */
       if (historyBackBtn) {
         historyBackBtn.addEventListener("click", function () {
           if (runHistoryIndex <= 0) return;
@@ -1043,6 +1625,7 @@
         });
       }
 
+      /* Экспорт текущей формы в JSON и импорт обратно (см. applyEulerStateFromFile). */
       document.getElementById("saveStateBtn").addEventListener("click", function () {
         var stamp = new Date().toISOString().replace(/[:.]/g, "-");
         downloadJson("euler-ode-form-" + stamp + ".json", getEulerStateForFile());
@@ -1066,14 +1649,16 @@
           alert("Не удалось прочитать файл.");
         };
         reader.readAsText(f);
+        /* Сброс value, чтобы повторный выбор того же файла снова вызвал change. */
         input.value = "";
       });
 
       syncHistoryNavUi();
+      /* Первичная отрисовка графика по значениям полей по умолчанию (ошибки глушим — форма может быть невалидна). */
       window.addEventListener("load", function () {
         try { run(); } catch (e) { /* ignore first paint errors */ }
       });
-    })();
+    })(); /* конец IIFE: глобальная область не засоряется */
   </script>
 </body>
 </html>
