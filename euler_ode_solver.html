@@ -147,6 +147,32 @@
       height: 420px;
       margin-top: 0.5rem;
     }
+    .chart-empty-hint {
+      display: none;
+      position: absolute;
+      inset: 0;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 1.25rem;
+      font-size: 0.92rem;
+      color: var(--muted);
+      background: rgba(15, 20, 25, 0.72);
+      border-radius: 8px;
+      border: 1px dashed #30363d;
+      z-index: 1;
+    }
+    #chartPanel.is-cleared .chart-wrap canvas {
+      visibility: hidden;
+      pointer-events: none;
+    }
+    #chartPanel.is-cleared .method-toggles-wrap,
+    #chartPanel.is-cleared .method-detail-stack {
+      display: none;
+    }
+    #chartPanel.is-cleared .chart-empty-hint {
+      display: flex;
+    }
     .legend-inline {
       display: flex;
       flex-wrap: wrap;
@@ -171,7 +197,7 @@
       display: flex;
       flex-wrap: wrap;
       gap: 0.65rem 1.15rem;
-      align-items: center;
+      align-items: flex-start;
     }
     .method-toggle-row {
       display: inline-flex;
@@ -196,6 +222,149 @@
       cursor: help;
       border-bottom: 1px dotted rgba(139, 156, 179, 0.5);
       color: var(--text);
+    }
+    .method-toggle-block {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.35rem;
+      padding: 0.35rem 0.45rem;
+      border-radius: 8px;
+      border: 1px solid #30363d;
+      background: rgba(15, 20, 25, 0.45);
+    }
+    .method-toggle-block .method-toggle-row {
+      cursor: pointer;
+    }
+    button.method-detail-btn {
+      padding: 0.28rem 0.55rem;
+      font-size: 0.72rem;
+      font-weight: 600;
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid rgba(88, 166, 255, 0.55);
+      border-radius: 6px;
+    }
+    button.method-detail-btn:hover {
+      filter: none;
+      background: rgba(88, 166, 255, 0.12);
+    }
+    .method-detail-stack {
+      margin-top: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+    .method-detail-stack > .method-detail-pane {
+      margin-top: 0;
+      padding: 1rem 1.15rem;
+      border-radius: 10px;
+      border: 1px solid #d0d7de;
+      background: #f6f8fc;
+      box-shadow: 0 1px 2px rgba(27, 31, 36, 0.06);
+      font-size: 0.86rem;
+      color: #24292f;
+    }
+    .method-detail-stack > .method-detail-pane[hidden] {
+      display: none !important;
+    }
+    .method-detail-pane-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-bottom: 0.55rem;
+    }
+    .method-detail-stack .method-detail-title {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 650;
+      color: #0969da;
+    }
+    .method-detail-stack button.method-detail-close {
+      padding: 0.4rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: #eaeef2;
+      color: #24292f;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+    }
+    .method-detail-stack button.method-detail-close:hover {
+      filter: none;
+      background: #d8dee4;
+    }
+    .method-detail-stack .method-detail-meta {
+      font-size: 0.8rem;
+      color: #57606a;
+      margin-bottom: 0.65rem;
+      line-height: 1.5;
+    }
+    .method-detail-stack .method-detail-meta code {
+      color: #0550ae;
+      background: #eaeef2;
+      padding: 0.12rem 0.35rem;
+      border-radius: 4px;
+      font-size: 0.76rem;
+    }
+    .method-detail-stack .method-detail-algo {
+      color: #24292f;
+      line-height: 1.58;
+      margin-bottom: 0.75rem;
+    }
+    .method-detail-stack .method-detail-algo p {
+      margin: 0 0 0.55rem;
+      font-size: 0.84rem;
+    }
+    .method-detail-stack .method-detail-algo p:last-child {
+      margin-bottom: 0;
+    }
+    .method-detail-stack .method-detail-subtitle {
+      margin: 0 0 0.45rem;
+      font-size: 0.84rem;
+      font-weight: 650;
+      color: #1f2328;
+    }
+    .method-detail-stack .method-detail-table-wrap {
+      max-height: min(55vh, 520px);
+      overflow: auto;
+      border-radius: 8px;
+      border: 1px solid #d0d7de;
+      background: #ffffff;
+    }
+    .method-detail-stack .method-detail-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: ui-monospace, Consolas, "Cascadia Mono", monospace;
+      font-size: 0.76rem;
+    }
+    .method-detail-stack .method-detail-table th,
+    .method-detail-stack .method-detail-table td {
+      padding: 0.32rem 0.5rem;
+      text-align: right;
+      border-bottom: 1px solid #eaeef2;
+      white-space: nowrap;
+      color: #24292f;
+    }
+    .method-detail-stack .method-detail-table th:first-child,
+    .method-detail-stack .method-detail-table td:first-child {
+      text-align: center;
+    }
+    .method-detail-stack .method-detail-table thead th {
+      position: sticky;
+      top: 0;
+      background: #eaeef2;
+      color: #0969da;
+      font-weight: 650;
+      z-index: 1;
+      border-bottom: 1px solid #d0d7de;
+    }
+    .method-detail-stack .method-detail-table tbody tr:hover td {
+      background: rgba(9, 105, 218, 0.06);
+    }
+    .method-detail-stack .method-detail-note {
+      color: #57606a;
     }
     details.parse-help {
       margin-top: 1rem;
@@ -261,7 +430,7 @@
     </div>
   </header>
   <main>
-    <div class="panel">
+    <div class="panel" id="equationPanel">
       <h2>Уравнение и параметры</h2>
       <div class="preset-bar">
         <label for="fPreset">Стандартные примеры (учебник, тесты жёсткости, модели из статей)</label>
@@ -321,15 +490,19 @@
       <div id="errorBox" class="err" style="display: none;"></div>
     </div>
 
-    <div class="panel">
+    <div class="panel" id="chartPanel">
       <h2>График y(x)</h2>
       <div class="chart-wrap">
         <canvas id="chart"></canvas>
+        <div id="chartEmptyHint" class="chart-empty-hint" hidden aria-live="polite">
+          Графики скрыты: изменены уравнение или параметры. Нажмите «Рассчитать и построить график», чтобы обновить кривые.
+        </div>
       </div>
       <div class="method-toggles-wrap">
         <div class="method-toggles-hint">Галочки включают или скрывают кривую. Наведите курсор на название метода — краткое описание шага.</div>
         <div id="chartLegendToggles" class="method-toggles" role="group" aria-label="Видимость рядов на графике"></div>
       </div>
+      <div id="methodDetailStack" class="method-detail-stack" aria-live="polite"></div>
     </div>
   </main>
 
@@ -827,6 +1000,231 @@
        */
       var legendVisibilityByLabel = {};
 
+      /** Последний успешный расчёт: траектории по подписи ряда и параметры для таблицы «Подробный расчёт». */
+      var lastRunContext = null;
+
+      /** Развёрнутое описание алгоритма по подписи dataset (совпадает с чекбоксами легенды). */
+      var METHOD_DETAIL_ALGORITHMS = {
+        "Явный Эйлер": [
+          "Решается задача Коши y′ = f(x, y) с условием y(x₀) = y₀; функция f задаётся в поле формы и компилируется в JavaScript.",
+          "Интегрирование идёт от x₀ к x₁. Направление по оси x выбирается автоматически (вперёд или назад). На равномерной сетке используется модуль шага |h| из формы; последний шаг по x укорачивается, чтобы последний узел совпал с x₁ (не «перепрыгнуть» конец отрезка).",
+          "На каждом шаге длины hₙ из известной точки (xₙ, yₙ) берётся наклон только в левом конце: yₙ₊₁ = yₙ + hₙ·f(xₙ, yₙ), затем xₙ₊₁ = xₙ + hₙ. Это классический явный (прямой) метод Эйлера — схема первого порядка точности по шагу.",
+          "Наклон в правой точке шага не используется, поэтому на жёстких задачах при слишком большом |h| решение может сильно искажаться; для сравнения на странице есть неявный Эйлер, Розенброк и др."
+        ],
+        "Неявный Эйлер": [
+          "Та же постановка y′ = f(x, y), y(x₀) = y₀, та же сетка по x, что и у явного Эйлера (включая укороченный последний шаг до x₁).",
+          "На шаге длины hₙ неизвестно значение yₙ₊₁ на новом слое xₙ₊₁ = xₙ + hₙ. Неявный метод Эйлера задаёт уравнение yₙ₊₁ = yₙ + hₙ·f(xₙ₊₁, yₙ₊₁) — правая часть вычисляется уже в «новой» точке по x и по искомому y.",
+          "Скалярное уравнение F(y) = y − yₙ − hₙ·f(xₙ₊₁, y) = 0 решается методом Ньютона. Производная F′(y) = 1 − hₙ·∂f/∂y(xₙ₊₁, y); частная производная ∂f/∂y здесь оценивается симметричной центральной разностью по y.",
+          "Начальное приближение для Ньютона — один шаг явного Эйлера из (xₙ, yₙ). Сошедшееся значение y попадает в таблицу как yₙ₊₁. На линейных затухающих моделях схема обычно устойчивее явной при том же шаге."
+        ],
+        "RK4 (классический)": [
+          "Одношаговая явная схема Рунге–Кутты четвёртого порядка (классическая таблица Бутчера с весами приращений 1/6, 2/6, 2/6, 1/6).",
+          "Из (x, y) с шагом h вводятся четыре приращения: k₁ = h·f(x, y); k₂ = h·f(x + h/2, y + k₁/2); k₃ = h·f(x + h/2, y + k₂/2); k₄ = h·f(x + h, y + k₃).",
+          "Новое значение y_new = y + (k₁ + 2k₂ + 2k₃ + k₄)/6. На всём интервале шаги по x такие же, как у Эйлера (|h| и укороченный финиш до x₁).",
+          "Порядок 4 по шагу означает, что ошибка локального шага O(h⁵), глобально на фиксированном интервале обычно существенно меньше, чем у явного Эйлера при том же h."
+        ],
+        "Хойн (RK2)": [
+          "Метод Хойна (улучшенный Эйлер, RK2 второго порядка): две оценки наклона на шаге длины h.",
+          "k₁ = h·f(x, y); затем «пробный» конец шага даёт k₂ = h·f(x + h, y + k₁). Итоговое приращение — полусумма: y_new = y + (k₁ + k₂)/2.",
+          "Интерпретация: наклон в начале шага и наклон в конце при «наивном» шаге явного Эйлера усредняются (идея трапеций). Порядок точности по шагу — 2."
+        ],
+        "Розенброк–Эйлер": [
+          "Линейно-неявный одношаговый вариант для скалярного уравнения y′ = f(x, y): в знаменателе используется ∂f/∂y в текущей точке (здесь численно, центральной разностью по y).",
+          "Шаг: y_new = y + h·f(x, y) / (1 − h·∂f/∂y(x, y)). Если ∂f/∂y постоянно (линейная f = λy), это совпадает с неявным Эйлером; для нелинейной f — локальная линеаризация в знаменателе (один «линеаризованный» неявный подшаг).",
+          "При |1 − h·∂f/∂y| очень малом шаг отклоняется с ошибкой — на практике нужен умеренный шаг или другая постановка."
+        ],
+        "Дискретный ряд: B(z)/(1−z)": [
+          "Дополнительная кривая строится только если f(x, y) на проверке не зависит от y, то есть фактически y′ = f(x).",
+          "Берётся та же последовательность узлов x₀, x₁, … по x, что у явного Эйлера. Определяются «локальные» коэффициенты bᵢ = (xᵢ₊₁ − xᵢ)·f(xᵢ) (в формуле f достаточно подставить y = 0 — значение не используется).",
+          "Формально bᵢ — коэффициенты ряда B(z) = Σ bᵢ zⁱ; кумулятивные суммы Σ bᵢ дают коэффициенты произведения B(z)/(1−z) в кольце степенных рядов. На узлах это совпадает с интегралом левыми прямоугольниками: yₙ = y₀ + Σᵢ₌₀ⁿ⁻¹ bᵢ.",
+          "В таблице столбец bₙ₋₁ совпадает с приращением y на шаге (для сравнения с Δx и f в левой точке)."
+        ],
+        "Точное y(x)": [
+          "Это не численное интегрирование ОДУ, а отдельная кривая: задаётся формула y(x) в поле «Точное решение», компилируется как функция от x.",
+          "На отрезке [x₀, x₁] строится равномерная по параметру сетка из N точек (N от 50 до 2000 в зависимости от длины интервала и шага h из формы — чтобы линия на графике была гладкой).",
+          "В таблице столбец Δxₙ — расстояние между соседними узлами этой вспомогательной сетки; он не обязан совпадать с шагом интегратора h численных методов."
+        ]
+      };
+
+      function escapeHtml(s) {
+        return String(s || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      function fmtTableNum(v) {
+        if (typeof v !== "number" || !isFinite(v)) return "—";
+        var ax = Math.abs(v);
+        if (ax !== 0 && (ax < 1e-10 || ax >= 1e10)) return v.toExponential(8);
+        return v.toPrecision(10);
+      }
+
+      function hideMethodDetailPane() {
+        var stack = document.getElementById("methodDetailStack");
+        if (stack) stack.innerHTML = "";
+      }
+
+      function buildMethodDetailTable(label, traj) {
+        var tbl = document.createElement("table");
+        tbl.className = "method-detail-table";
+        var thead = document.createElement("thead");
+        var hr = document.createElement("tr");
+        var isDiscrete = label === "Дискретный ряд: B(z)/(1−z)";
+        var isExact = label === "Точное y(x)";
+        function th(txt) {
+          var e = document.createElement("th");
+          e.textContent = txt;
+          hr.appendChild(e);
+        }
+        th("n");
+        th("xₙ");
+        th("yₙ");
+        th("Δxₙ");
+        if (isDiscrete) th("bₙ₋₁ = Δx·f(xₙ₋₁)");
+        thead.appendChild(hr);
+        tbl.appendChild(thead);
+        var tb = document.createElement("tbody");
+        var xs = traj.xs;
+        var ys = traj.ys;
+        var nPts = xs.length;
+        var fFn = lastRunContext && lastRunContext.f ? lastRunContext.f : null;
+        for (var i = 0; i < nPts; i++) {
+          var tr = document.createElement("tr");
+          function td(val) {
+            var e = document.createElement("td");
+            e.textContent = val;
+            tr.appendChild(e);
+          }
+          td(String(i));
+          td(fmtTableNum(xs[i]));
+          td(fmtTableNum(ys[i]));
+          if (i === 0) {
+            td("—");
+            if (isDiscrete) td("—");
+          } else {
+            var dx = xs[i] - xs[i - 1];
+            td(fmtTableNum(dx));
+            if (isDiscrete && fFn) {
+              var b = dx * fFn(xs[i - 1], 0);
+              td(fmtTableNum(b));
+            } else if (isDiscrete) {
+              td("—");
+            }
+          }
+          tb.appendChild(tr);
+        }
+        tbl.appendChild(tb);
+        var frag = document.createDocumentFragment();
+        frag.appendChild(tbl);
+        if (isExact) {
+          var note = document.createElement("p");
+          note.className = "method-detail-note";
+          note.style.margin = "0.45rem 0 0";
+          note.style.fontSize = "0.78rem";
+          note.textContent =
+            "Равномерная выборка на [x₀, x₁] для графика эталона; всего узлов: " + nPts + " (не шаг интегратора h).";
+          frag.appendChild(note);
+        }
+        return frag;
+      }
+
+      function showMethodDetailReport(label) {
+        var stack = document.getElementById("methodDetailStack");
+        if (!stack) return;
+
+        var pane = document.createElement("div");
+        pane.className = "method-detail-pane";
+
+        var head = document.createElement("div");
+        head.className = "method-detail-pane-head";
+        var titleEl = document.createElement("h3");
+        titleEl.className = "method-detail-title";
+        var closeBtn = document.createElement("button");
+        closeBtn.type = "button";
+        closeBtn.className = "method-detail-close";
+        closeBtn.textContent = "Скрыть";
+        closeBtn.addEventListener("click", function () {
+          pane.setAttribute("hidden", "");
+        });
+        head.appendChild(titleEl);
+        head.appendChild(closeBtn);
+        pane.appendChild(head);
+
+        var metaEl = document.createElement("div");
+        metaEl.className = "method-detail-meta";
+        pane.appendChild(metaEl);
+
+        var algoEl = document.createElement("div");
+        algoEl.className = "method-detail-algo";
+        pane.appendChild(algoEl);
+
+        var sub = document.createElement("h4");
+        sub.className = "method-detail-subtitle";
+        sub.textContent = "Расчёт на сетке";
+        pane.appendChild(sub);
+
+        var tableWrap = document.createElement("div");
+        tableWrap.className = "method-detail-table-wrap";
+        pane.appendChild(tableWrap);
+
+        if (!lastRunContext || !lastRunContext.trajectories || !lastRunContext.trajectories[label]) {
+          titleEl.textContent = label ? "Подробный расчёт: " + label : "Подробный расчёт";
+          metaEl.textContent = "";
+          var p = document.createElement("p");
+          p.textContent =
+            "Сначала нажмите «Рассчитать и построить график» — таблица строится по последнему успешному расчёту.";
+          algoEl.appendChild(p);
+          stack.appendChild(pane);
+          try {
+            pane.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          } catch (eScroll) {
+            /* ignore */
+          }
+          return;
+        }
+
+        titleEl.textContent = "Подробный расчёт: " + label;
+        var LRC = lastRunContext;
+        var metaHtml =
+          "Параметры сетки интегратора: x₀ = " +
+          fmtTableNum(LRC.x0) +
+          ", x₁ = " +
+          fmtTableNum(LRC.x1) +
+          ", y₀ = " +
+          fmtTableNum(LRC.y0) +
+          ", заданный в форме шаг |h| = " +
+          fmtTableNum(LRC.hInput) +
+          " (знак согласован с направлением к x₁).<br>f: <code>" +
+          escapeHtml(LRC.fDisplay) +
+          "</code>";
+        if (LRC.yExactDisplay) {
+          metaHtml += "<br>Точное y(x) на графике: <code>" + escapeHtml(LRC.yExactDisplay) + "</code>";
+        }
+        metaEl.innerHTML = metaHtml;
+        var paras = METHOD_DETAIL_ALGORITHMS[label];
+        if (paras && paras.length) {
+          for (var pi = 0; pi < paras.length; pi++) {
+            var pr = document.createElement("p");
+            pr.textContent = paras[pi];
+            algoEl.appendChild(pr);
+          }
+        } else {
+          var px = document.createElement("p");
+          px.textContent =
+            "Отдельное развёрнутое описание для этого ряда не задано; краткая справка — во всплывающей подсказке у названия метода.";
+          algoEl.appendChild(px);
+        }
+        tableWrap.appendChild(buildMethodDetailTable(label, LRC.trajectories[label]));
+        stack.appendChild(pane);
+        try {
+          pane.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        } catch (eScroll2) {
+          /* ignore */
+        }
+      }
+
       /**
        * Создаёт или пересоздаёт график: уничтожает старый экземпляр, чтобы не накапливать слушателей и память.
        * Легенда Chart отключена — подписи и видимость рядов реализованы внешним HTML (rebuildChartLegendToggles).
@@ -896,7 +1294,7 @@
       }
 
       /**
-       * Перестраивает блок #chartLegendToggles: для каждого dataset — чекбокс видимости, цветной квадрат, подпись.
+       * Перестраивает блок #chartLegendToggles: для каждого dataset — блок с чекбоксом, подписью и кнопкой «Подробный расчёт».
        * Состояние чекбокса берётся из chart после применения сохранённой видимости; при change — запись в legendVisibilityByLabel.
        */
       function rebuildChartLegendToggles() {
@@ -908,6 +1306,9 @@
           (function (idx) {
             var ds = chart.data.datasets[idx];
             var hint = methodHintByLabel(ds.label || "");
+            var lab = ds.label || "";
+            var block = document.createElement("div");
+            block.className = "method-toggle-block";
             var row = document.createElement("label");
             row.className = "method-toggle-row";
             row.title = hint;
@@ -920,7 +1321,7 @@
             dot.title = hint;
             var name = document.createElement("span");
             name.className = "method-name";
-            name.textContent = ds.label || "Ряд " + (idx + 1);
+            name.textContent = lab || "Ряд " + (idx + 1);
             name.title = hint;
             cb.addEventListener("change", function () {
               var d = chart.data.datasets[idx];
@@ -931,8 +1332,49 @@
             row.appendChild(cb);
             row.appendChild(dot);
             row.appendChild(name);
-            host.appendChild(row);
+            block.appendChild(row);
+            var detBtn = document.createElement("button");
+            detBtn.type = "button";
+            detBtn.className = "method-detail-btn";
+            detBtn.textContent = "Подробный расчёт";
+            detBtn.addEventListener("click", function (ev) {
+              ev.preventDefault();
+              ev.stopPropagation();
+              showMethodDetailReport(lab || "Ряд " + (idx + 1));
+            });
+            block.appendChild(detBtn);
+            host.appendChild(block);
           })(i);
+        }
+      }
+
+      /**
+       * Любое изменение уравнения или параметров делает текущий график недействительным: уничтожаем Chart.js,
+       * очищаем внешнюю легенду и показываем подсказку до следующего успешного run().
+       * Не вызывать при программной подстановке полей (historyRestoring).
+       */
+      function clearChartBecauseFormChanged() {
+        if (historyRestoring) return;
+        lastRunContext = null;
+        hideMethodDetailPane();
+        var errBox = document.getElementById("errorBox");
+        if (errBox) {
+          errBox.style.display = "none";
+          errBox.textContent = "";
+        }
+        var preview = document.getElementById("parsePreview");
+        if (preview) preview.textContent = "";
+        var host = document.getElementById("chartLegendToggles");
+        if (host) host.innerHTML = "";
+        var chartPanel = document.getElementById("chartPanel");
+        if (chartPanel) chartPanel.classList.add("is-cleared");
+        var chartEmptyHint = document.getElementById("chartEmptyHint");
+        if (chartEmptyHint) chartEmptyHint.removeAttribute("hidden");
+        if (chart) {
+          try {
+            chart.destroy();
+          } catch (eClear) { /* ignore */ }
+          chart = undefined;
         }
       }
 
@@ -1083,14 +1525,14 @@
             },
             {
               id: "fx_trig_sum",
-              label: "Смесь гармоник: y′ = sin x + 0,3·cos(2x), y(0)=0",
-              f: "Math.sin(x)+0.3*Math.cos(2*x)",
-              yExact: "1-Math.cos(x)+0.15*Math.sin(2*x)",
+              label: "Смесь гармоник: y′ = sin(x + 2,5·sin 8x), y(0)=0",
+              f: "Math.sin(x+2.5*Math.sin(8*x))",
+              yExact: "",
               y0: 0,
               x0: 0,
-              x1: 8,
-              h: 0.12,
-              note: "Сумма двух гармоник по x; эталон собран из первообразных."
+              x1: 10,
+              h: 0.06,
+              note: "То же имя примера, но вместо суммы фиксированных гармоник — фазовая модуляция: мгновенная «частота» d/dx(x+2,5·sin 8x) = 1+20·cos 8x резко меняется по x. Элементарного y(x) нет — кривая «точное» не строится; возьмите помельче h при необходимости."
             }
           ]
         },
@@ -1458,6 +1900,8 @@
        * При ошибке на любом этапе пишет в #errorBox и выходит; при успехе обновляет историю (если не восстановление).
        */
       function run() {
+        lastRunContext = null;
+        hideMethodDetailPane();
         /* Сброс сообщения об ошибке с прошлого запуска. */
         const errBox = document.getElementById("errorBox");
         errBox.style.display = "none";
@@ -1570,6 +2014,10 @@
         preview.textContent = parseLines.join("\n");
 
         /* --- Визуализация: пересоздание chart, набор datasets, чекбоксы легенды, история --- */
+        var chartPanel = document.getElementById("chartPanel");
+        if (chartPanel) chartPanel.classList.remove("is-cleared");
+        var chartEmptyHint = document.getElementById("chartEmptyHint");
+        if (chartEmptyHint) chartEmptyHint.setAttribute("hidden", "");
         ensureChart();
         const datasets = [
           {
@@ -1647,6 +2095,43 @@
         chart.update();
         rebuildChartLegendToggles();
 
+        var fLineText = parseLines.length ? parseLines[0] : "";
+        var yLineText = "";
+        for (var _li = 0; _li < parseLines.length; _li++) {
+          if (parseLines[_li].indexOf("y(x)") >= 0 && parseLines[_li].indexOf("→") >= 0) yLineText = parseLines[_li];
+        }
+        lastRunContext = {
+          trajectories: {
+            "Явный Эйлер": { xs: exE.xs, ys: exE.ys },
+            "Неявный Эйлер": { xs: imE.xs, ys: imE.ys },
+            "RK4 (классический)": { xs: rk4Res.xs, ys: rk4Res.ys },
+            "Хойн (RK2)": { xs: heunRes.xs, ys: heunRes.ys },
+            "Розенброк–Эйлер": { xs: roseRes.xs, ys: roseRes.ys }
+          },
+          x0: x0,
+          x1: x1,
+          hInput: h,
+          y0: y0,
+          fDisplay: fLineText,
+          yExactDisplay: yLineText,
+          f: f
+        };
+        if (discreteQuotRes) {
+          lastRunContext.trajectories["Дискретный ряд: B(z)/(1−z)"] = {
+            xs: discreteQuotRes.xs,
+            ys: discreteQuotRes.ys
+          };
+        }
+        if (exactPts) {
+          var exXs = [];
+          var exYs = [];
+          for (var _ei = 0; _ei < exactPts.length; _ei++) {
+            exXs.push(exactPts[_ei].x);
+            exYs.push(exactPts[_ei].y);
+          }
+          lastRunContext.trajectories["Точное y(x)"] = { xs: exXs, ys: exYs };
+        }
+
         /* Запись в историю: пропуск первого автозапуска и любого run() под флагом historyRestoring. */
         if (isBootstrapRun) {
           isBootstrapRun = false;
@@ -1666,18 +2151,27 @@
       if (fPresetEl) {
         fPresetEl.addEventListener("change", function () {
           applyPreset(this.value);
+          clearChartBecauseFormChanged();
         });
       }
       var fxyEl = document.getElementById("fxy");
       if (fxyEl) {
         /* Ручное редактирование f сбрасывает выбор пресета, чтобы не было рассинхрона подписи и поля. */
         fxyEl.addEventListener("input", function () {
+          clearChartBecauseFormChanged();
           if (fPresetEl && fPresetEl.value !== "") {
             fPresetEl.value = "";
             var pm = document.getElementById("presetMeta");
             if (pm) pm.textContent = "";
           }
         });
+      }
+      var eqParamIds = ["yExact", "y0", "x0", "x1", "h"];
+      for (var eqi = 0; eqi < eqParamIds.length; eqi++) {
+        var eqEl = document.getElementById(eqParamIds[eqi]);
+        if (!eqEl) continue;
+        eqEl.addEventListener("input", clearChartBecauseFormChanged);
+        eqEl.addEventListener("change", clearChartBecauseFormChanged);
       }
 
       /* Лимит длины истории: синхронизация с localStorage и обрезка массива при уменьшении числа. */
