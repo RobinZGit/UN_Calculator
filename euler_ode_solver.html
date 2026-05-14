@@ -1073,16 +1073,23 @@
         var hr = document.createElement("tr");
         var isDiscrete = label === "Дискретный ряд: B(z)/(1−z)";
         var isExact = label === "Точное y(x)";
-        function th(txt) {
+        function th(txt, titleOpt) {
           var e = document.createElement("th");
           e.textContent = txt;
+          if (titleOpt) e.title = titleOpt;
           hr.appendChild(e);
         }
         th("n");
         th("xₙ");
         th("yₙ");
         th("Δxₙ");
-        if (isDiscrete) th("bₙ₋₁ = Δx·f(xₙ₋₁)");
+        if (isDiscrete) th("bₙ₋₁ = Δx·f(xₙ₋₁)", "Вклад шага; для y′=f(x) совпадает с yₙ−yₙ₋₁.");
+        var exactFn = lastRunContext && lastRunContext.exactFn ? lastRunContext.exactFn : null;
+        var compareExact = Boolean(exactFn) && !isExact;
+        if (compareExact) {
+          th("y этал.", "Значение заданного точного y(x) в узле xₙ");
+          th("δₙ", "Отклонение: yₙ численного метода минус y эталона в той же точке xₙ");
+        }
         thead.appendChild(hr);
         tbl.appendChild(thead);
         var tb = document.createElement("tbody");
@@ -1090,6 +1097,8 @@
         var ys = traj.ys;
         var nPts = xs.length;
         var fFn = lastRunContext && lastRunContext.f ? lastRunContext.f : null;
+        var sumSq = 0;
+        var okCount = 0;
         for (var i = 0; i < nPts; i++) {
           var tr = document.createElement("tr");
           function td(val) {
@@ -1106,10 +1115,25 @@
           } else {
             var dx = xs[i] - xs[i - 1];
             td(fmtTableNum(dx));
-            if (isDiscrete && fFn) {
-              var b = dx * fFn(xs[i - 1], 0);
-              td(fmtTableNum(b));
-            } else if (isDiscrete) {
+            if (isDiscrete) {
+              if (fFn) {
+                td(fmtTableNum(dx * fFn(xs[i - 1], 0)));
+              } else {
+                td("—");
+              }
+            }
+          }
+          if (compareExact) {
+            try {
+              var yex = exactFn(xs[i]);
+              if (!isFinite(yex)) throw new Error("nfe");
+              var del = ys[i] - yex;
+              td(fmtTableNum(yex));
+              td(fmtTableNum(del));
+              sumSq += del * del;
+              okCount++;
+            } catch (eCmp) {
+              td("—");
               td("—");
             }
           }
@@ -1118,6 +1142,37 @@
         tbl.appendChild(tb);
         var frag = document.createDocumentFragment();
         frag.appendChild(tbl);
+        if (compareExact && okCount > 0) {
+          var normed = document.createElement("p");
+          normed.className = "method-detail-note";
+          normed.style.margin = "0.55rem 0 0";
+          normed.style.fontSize = "0.82rem";
+          var l2 = Math.sqrt(sumSq);
+          var rmse = Math.sqrt(sumSq / okCount);
+          normed.innerHTML =
+            "<strong>Квадратичная (ℓ₂) норма отклонений по узлам:</strong> ‖δ‖₂ = √(Σ δₙ²) = " +
+            fmtTableNum(l2) +
+            ". <strong>RMSE</strong> = √(Σ δₙ² / N) = " +
+            fmtTableNum(rmse) +
+            " (N = " +
+            okCount +
+            " узлов).";
+          frag.appendChild(normed);
+        } else if (compareExact && okCount === 0) {
+          var bad = document.createElement("p");
+          bad.className = "method-detail-note";
+          bad.style.margin = "0.55rem 0 0";
+          bad.textContent =
+            "Эталон y(x) не удалось вычислить ни в одном узле этой сетки (проверьте область определения и формулу).";
+          frag.appendChild(bad);
+        } else if (!isExact && !exactFn) {
+          var hint = document.createElement("p");
+          hint.className = "method-detail-note";
+          hint.style.margin = "0.55rem 0 0";
+          hint.textContent =
+            "Чтобы появились столбцы «y этал.», «δₙ» и итоговые ‖δ‖₂ и RMSE, задайте «Точное решение y(x)» и выполните расчёт.";
+          frag.appendChild(hint);
+        }
         if (isExact) {
           var note = document.createElement("p");
           note.className = "method-detail-note";
@@ -1974,11 +2029,13 @@
 
         /* --- Опционально: плотная кривая «точного» решения y(x) для сравнения --- */
         var exactPts = null;
+        var exactFnSaved = null;
         if (exactBody) {
           var g;
           try {
             var rg = compileFn(exactBody, ["x"]);
             g = rg.fn;
+            exactFnSaved = g;
             parseLines.push("y(x) → " + rg.expanded);
           } catch (e) {
             errBox.textContent = "Ошибка в точном решении: " + String(e.message || e);
@@ -2114,7 +2171,8 @@
           y0: y0,
           fDisplay: fLineText,
           yExactDisplay: yLineText,
-          f: f
+          f: f,
+          exactFn: exactFnSaved
         };
         if (discreteQuotRes) {
           lastRunContext.trajectories["Дискретный ряд: B(z)/(1−z)"] = {
