@@ -373,6 +373,52 @@
       border-radius: 8px;
       padding: 0.55rem 0.65rem;
     }
+    .method-detail-stack .method-detail-long-arith {
+      margin-top: 0.85rem;
+      padding: 0.65rem 0.75rem;
+      border: 1px solid #d0d7de;
+      border-radius: 8px;
+      background: #f6f8fa;
+    }
+    .method-detail-stack .method-detail-long-arith .la-row {
+      margin: 0.45rem 0 0.2rem;
+      font-size: 0.78rem;
+      color: #57606a;
+    }
+    .method-detail-stack .method-detail-long-arith .la-row:first-child {
+      margin-top: 0;
+    }
+    .method-detail-stack .method-detail-long-arith .la-label {
+      font-weight: 650;
+      color: #1f2328;
+      margin-right: 0.35rem;
+    }
+    .method-detail-stack .method-detail-block-line {
+      display: block;
+      margin: 0.2rem 0 0.45rem;
+      padding: 0.45rem 0.55rem;
+      font-family: ui-monospace, Consolas, "Cascadia Mono", monospace;
+      font-size: 0.74rem;
+      line-height: 1.45;
+      word-break: break-all;
+      white-space: pre-wrap;
+      background: #ffffff;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      color: #24292f;
+    }
+    .method-detail-stack .method-detail-divide-rule {
+      font-family: ui-monospace, Consolas, "Cascadia Mono", monospace;
+      font-size: 0.74rem;
+      line-height: 1.5;
+      margin: 0.35rem 0 0.55rem;
+      padding: 0.45rem 0.55rem;
+      background: #ffffff;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      white-space: pre-wrap;
+      color: #24292f;
+    }
     details.parse-help {
       margin-top: 1rem;
       padding: 0.75rem 1rem;
@@ -423,7 +469,7 @@
     <div class="header-top">
       <div>
         <h1>ДУ первого порядка: Эйлер, Рунге–Кутта и Розенброк</h1>
-        <div class="sub">y′ = f(x, y). На графике <strong>одновременно</strong>: явный и неявный Эйлер, RK4, метод Хойна (RK2), линейно-неявный шаг Розенброка–Эйлера (численный ∂f/∂y); если f <strong>не зависит от y</strong>, дополнительно — дискретный ряд B(z)/(1−z) на той же сетке (без полиномиальной подгонки f). Строка <strong>нормализуется</strong> (см. ниже), затем выполняется как JavaScript: <code>x</code>, <code>y</code>; <code>Math.*</code>; «школьные» обозначения: <code>sh</code>/<code>ch</code>/<code>csh</code>/<code>th</code>, <code>sch</code>/<code>cth</code>/<code>csch</code>, <code>ln</code>/<code>lg</code>/<code>lb</code>, <code>log10</code>/<code>log2</code> и т.д.</div>
+        <div class="sub">y′ = f(x, y). На графике <strong>одновременно</strong>: явный и неявный Эйлер, RK4, метод Хойна (RK2), линейно-неявный шаг Розенброка–Эйлера (численный ∂f/∂y); если f <strong>не зависит от y</strong>, дополнительно — дискретный ряд B(z)/(1−z) и длинное целое N÷(111…1) на той же сетке (без полиномиальной подгонки f). Строка <strong>нормализуется</strong> (см. ниже), затем выполняется как JavaScript: <code>x</code>, <code>y</code>; <code>Math.*</code>; «школьные» обозначения: <code>sh</code>/<code>ch</code>/<code>csh</code>/<code>th</code>, <code>sch</code>/<code>cth</code>/<code>csch</code>, <code>ln</code>/<code>lg</code>/<code>lb</code>, <code>log10</code>/<code>log2</code> и т.д.</div>
       </div>
       <div class="header-tools" aria-label="История расчётов и файл состояния">
         <label for="historyMaxStates">Шагов истории</label>
@@ -968,6 +1014,142 @@
         return { xs: xs.slice(), ys: ys };
       }
 
+      /** Число десятичных знаков при переводе bᵢ = Δx·f в целые «цифры» длинной арифметики. */
+      var LONG_ARITH_DECIMALS = 8;
+
+      /**
+       * Упаковка массива знаковых целых qᵢ в одно длинное целое N без переносов между блоками.
+       * Отрицательные qᵢ кодируются смещением (bias): uᵢ = qᵢ + B, все uᵢ ≥ 0; восстановление qᵢ = uᵢ − B.
+       * N = u₀ + u₁·R + u₂·R² + …, R = 10^W (W — ширина блока в десятичных цифрах).
+       * @param {number[]} signedInts
+       * @returns {{ N: bigint, H: bigint, bias: number, blockWidth: number, radix: bigint, biased: number[], signedInts: number[], packedDecimal: string, repunitDecimal: string }}
+       */
+      function packSignedStepsIntoLongInteger(signedInts) {
+        var n = signedInts.length;
+        if (n === 0) {
+          return {
+            N: 0n,
+            H: 1n,
+            bias: 0,
+            blockWidth: 1,
+            radix: 10n,
+            biased: [],
+            signedInts: [],
+            packedDecimal: "0",
+            repunitDecimal: "1"
+          };
+        }
+        var maxAbs = 0;
+        for (var i = 0; i < n; i++) {
+          maxAbs = Math.max(maxAbs, Math.abs(signedInts[i]));
+        }
+        var bias = maxAbs;
+        var biased = [];
+        for (var j = 0; j < n; j++) {
+          biased.push(signedInts[j] + bias);
+        }
+        var maxDigit = bias + maxAbs;
+        var blockWidth = maxDigit === 0 ? 1 : String(maxDigit).length + 1;
+        var blocks = [];
+        for (var k = 0; k < n; k++) {
+          blocks.push(String(biased[k]).padStart(blockWidth, "0"));
+        }
+        var packedDecimal = blocks.join("");
+        var N = BigInt(packedDecimal);
+        var radix = 10n ** BigInt(blockWidth);
+        var repunitDecimal = "1".repeat(n);
+        var H = 0n;
+        var pow = 1n;
+        for (var r = 0; r < n; r++) {
+          H += pow;
+          pow *= radix;
+        }
+        return {
+          N: N,
+          H: H,
+          bias: bias,
+          blockWidth: blockWidth,
+          radix: radix,
+          biased: biased,
+          signedInts: signedInts.slice(),
+          packedDecimal: packedDecimal,
+          repunitDecimal: repunitDecimal
+        };
+      }
+
+      /**
+       * «Деление на (111…1)» — формальный аналог B(z)/(1−z): префиксные суммы знаковых цифр qᵢ.
+       * (Буквальное N/H даёт другой смысл; здесь деление = накопление Σ qᵢ, как коэффициенты B/(1−z).)
+       * @param {number[]} signedInts
+       * @returns {number[]}
+       */
+      function formalRepunitPrefixSums(signedInts) {
+        var out = [];
+        var acc = 0;
+        for (var i = 0; i < signedInts.length; i++) {
+          acc += signedInts[i];
+          out.push(acc);
+        }
+        return out;
+      }
+
+      /**
+       * Распаковка i-го блока uᵢ из N (для проверки кодирования).
+       */
+      function unpackBiasedDigitFromPacked(pack, index) {
+        var blocks = [];
+        var w = pack.blockWidth;
+        var s = pack.packedDecimal;
+        for (var i = 0; i < s.length; i += w) {
+          blocks.push(parseInt(s.slice(i, i + w), 10));
+        }
+        if (index < 0 || index >= blocks.length) return NaN;
+        return blocks[index] - pack.bias;
+      }
+
+      /**
+       * Только y′ = f(x): bᵢ = Δx·f в узле шага (endpoint: «left» — xᵢ явный Эйлер, «right» — xᵢ₊₁ неявный при f(x)),
+       * qᵢ = round(bᵢ·10^p), упаковка N со смещением, «÷ (111…1)» = префиксная Σqᵢ.
+       * @param {(x:number,y:number)=>number} f
+       * @param {number[]} xs
+       * @param {number} y0
+       * @param {number} [scalePow]
+       * @param {'left'|'right'} [endpoint]
+       * @returns {{ xs: number[], ys: number[], meta: Object, stepRows: Object[] }}
+       */
+      function integrateLongIntegerRepunitDivide(f, xs, y0, scalePow, endpoint) {
+        scalePow = scalePow == null ? LONG_ARITH_DECIMALS : scalePow;
+        endpoint = endpoint === "right" ? "right" : "left";
+        var scale = Math.pow(10, scalePow);
+        var qs = [];
+        var stepRows = [];
+        for (var k = 1; k < xs.length; k++) {
+          var dx = xs[k] - xs[k - 1];
+          var xEval = endpoint === "right" ? xs[k] : xs[k - 1];
+          var fi = f(xEval, 0);
+          if (!isFinite(fi)) {
+            throw new Error(
+              "Длинное целое ÷(111…1): f(x) не конечно в узле x=" + xEval + "."
+            );
+          }
+          var b = dx * fi;
+          var q = Math.round(b * scale);
+          qs.push(q);
+          stepRows.push({ dx: dx, xEval: xEval, fval: fi, b: b, q: q, endpoint: endpoint });
+        }
+        var pack = packSignedStepsIntoLongInteger(qs);
+        var prefixQ = formalRepunitPrefixSums(qs);
+        var ys = [y0];
+        for (var j = 0; j < prefixQ.length; j++) {
+          ys.push(y0 + prefixQ[j] / scale);
+        }
+        pack.scalePow = scalePow;
+        pack.prefixQ = prefixQ;
+        pack.endpoint = endpoint;
+        pack.stepRows = stepRows;
+        return { xs: xs.slice(), ys: ys, meta: pack, stepRows: stepRows };
+      }
+
       /**
        * Заменяет в выражении независимую переменную x на числовой литерал (для F(x₀)).
        */
@@ -1120,6 +1302,10 @@
           "Линейно-неявный шаг с учётом ∂f/∂y в знаменателе (здесь ∂f/∂y численно). Удобен на жёстких скалярных уравнениях.",
         "Дискретный ряд: B(z)/(1−z)":
           "Только если y′=f(x): bᵢ=(xᵢ₊₁−xᵢ)f(xᵢ), ряд B(z)=Σ bᵢzⁱ; кумулятивные суммы — коэффициенты B(z)/(1−z). То же, что ∫ левыми прямоугольниками на этой сетке, без аппроксимации f многочленом.",
+        "Длинное целое: N ÷ (111…1)":
+          "Только y′=f(x), явный Эйлер: qᵢ=round(Δx·f(xᵢ)); упаковка N со смещением; ÷ repunit = Σqᵢ (анalog B/(1−z)).",
+        "Длинное целое (неявн.): N ÷ (111…1)":
+          "Только y′=f(x): qᵢ=round(Δx·f(xᵢ₊₁)) — f на правом конце шага; та же упаковка и ÷(111…1); = неявный Эйлер (без итераций по y).",
         "Точное y(x)":
           "Не численный интегратор: значения вашей формулы y(x) на плотной сетке по x для сравнения с методами."
       };
@@ -1180,6 +1366,22 @@
           "Берётся та же последовательность узлов x₀, x₁, … по x, что у явного Эйлера. Определяются «локальные» коэффициенты bᵢ = (xᵢ₊₁ − xᵢ)·f(xᵢ) (в формуле f достаточно подставить y = 0 — значение не используется).",
           "Формально bᵢ — коэффициенты ряда B(z) = Σ bᵢ zⁱ; кумулятивные суммы Σ bᵢ дают коэффициенты произведения B(z)/(1−z) в кольце степенных рядов. На узлах это совпадает с интегралом левыми прямоугольниками: yₙ = y₀ + Σᵢ₌₀ⁿ⁻¹ bᵢ.",
           "В таблице столбец bₙ₋₁ совпадает с приращением y на шаге (для сравнения с Δx и f в левой точке)."
+        ],
+        "Длинное целое: N ÷ (111…1)": [
+          "Тот же случай y′ = f(x) и та же сетка узлов, что у явного Эйлера. Локальные вклады bᵢ = (xᵢ₊₁ − xᵢ)·f(xᵢ) могут быть отрицательными (отрицательный шаг Δx или отрицательная f).",
+          "Шаг 1 — перевод в точные целые «цифры»: qᵢ = round(bᵢ · 10^p) (на странице p = " + LONG_ARITH_DECIMALS + "). Дальше все операции с qᵢ — в целой арифметике BigInt, без накопления ошибки float на сумме.",
+          "Шаг 2 — как уложить отрицательные qᵢ в одно длинное целое N без знака минус внутри блока: смещение (bias). Пусть B = maxᵢ |qᵢ|. Кодируем uᵢ = qᵢ + B ≥ 0. Тогда все блоки неотрицательны. Восстановление: qᵢ = uᵢ − B. (Альтернатива — два числа N₊ и N₋ для положительных и отрицательных частей; здесь один N со смещением — проще для «одного числа».)",
+          "Шаг 3 — упаковка: каждый uᵢ записывается в фиксированный блок ширины W десятичных цифр (W выбирается так, чтобы блоки не сливались). N = u₀ + u₁·R + u₂·R² + …, где R = 10^W. Это то же самое, что склеить блоки нулями: «…000u₂000u₁000u₀».",
+          "Шаг 4 — деление на repunit 111…1 (формальный аналог (1−z)⁻¹): в позиционной системе с основанием R = 10^W делитель H = 1 + R + R² + … + R^{m−1} — «число из единиц», у которого в каждом блоке ширины W стоит цифра 1 (между блоками — нули-«разделители», как при склейке u₀‖u₁‖u₂).",
+          "Шаг 5 — «деление» N ÷ H по смыслу ряда B/(1−z): **не** целочисленное частное N/H в десятичной записи, а префиксные суммы Sₙ = q₀ + q₁ + … + qₙ₋₁ расшифрованных «цифр» qᵢ = uᵢ − B. Ниже в блоке «Числитель, знаменатель и результат» показаны оба больших числа и пошаговое накопление Sₙ.",
+          "Шаг 6 — ответ на сетке: yₙ = y₀ + Sₙ / 10^p. На той же сетке, что B/(1−z), кривая совпадает с **явным** Эйлером с точностью до округления qᵢ; в таблице видны qᵢ, uᵢ и Σq."
+        ],
+        "Длинное целое (неявн.): N ÷ (111…1)": [
+          "Тот же y′ = f(x), та же сетка, та же схема упаковки N и «деления» на 111…1. Отличие — **сдвиг точки, где берётся f**: bᵢ = Δxᵢ·f(xᵢ₊₁) (правый конец шага), а не f(xᵢ).",
+          "Для y′ = f(x) неявный Эйлер yₙ₊₁ = yₙ + Δx·f(xₙ₊₁) **не требует** итераций по y (f не зависит от y). Вклады по-прежнему собираются заранее в qᵢ и суммируются префиксом.",
+          "Умножение N на R (сдвиг блоков) **не** превращает явный метод в неявный: qᵢ(неявн.) = round(Δxᵢ·f(xᵢ₊₁)) обычно ≠ сдвинутому qᵢ(явн.). «Сдвиг» — смена **индекса узла в f**.",
+          "Числитель N и знаменатель H = 111…1 (repunit из m блоков-единиц) строятся так же, как у явного варианта; ниже показаны N, H и результат «деления» — префиксные суммы Σq и yₙ = y₀ + (Σq)/10^p.",
+          "На графике кривая совпадает с **неявным** Эйлером (до округления qᵢ). Если f зависит от y, «цифру» шага нельзя выписать заранее — одного N и repunit недостаточно."
         ],
         "Точное y(x)": [
           "Это не численное интегрирование ОДУ, а отдельная кривая: задаётся формула y(x) в поле «Точное решение», компилируется как функция от x.",
@@ -1246,6 +1448,212 @@
         return v.toPrecision(10);
       }
 
+      /** Блоки uᵢ (или qᵢ) ширины W, разделённые пробелом — как в калькуляторе длинной арифметики. */
+      function formatLongArithBlockLine(values, blockWidth, signed) {
+        if (!values || !values.length) return "—";
+        var w = blockWidth || 1;
+        var parts = [];
+        for (var i = 0; i < values.length; i++) {
+          var v = values[i];
+          if (signed && v < 0) {
+            parts.push("(" + String(v) + ")");
+          } else {
+            var t = String(Math.abs(v));
+            if (t.length > w) parts.push("(" + String(v) + ")");
+            else parts.push(String(v < 0 ? "-" : "") + "0".repeat(w - t.length) + t);
+          }
+        }
+        return parts.join(" ");
+      }
+
+      /** Repunit H: m блоков «000…001» ширины W (единица в каждом разряде R = 10^W). */
+      function formatRepunitBlockLine(count, blockWidth) {
+        if (!count) return "—";
+        var one = "1".padStart(blockWidth || 1, "0");
+        var out = [];
+        for (var i = 0; i < count; i++) out.push(one);
+        return out.join(" ");
+      }
+
+      /** Склеенная десятичная запись N с пробелами между блоками ширины W. */
+      function formatPackedWithBlockSpaces(packedDecimal, blockWidth) {
+        if (!packedDecimal) return "—";
+        var w = blockWidth || 1;
+        var chunks = [];
+        for (var i = 0; i < packedDecimal.length; i += w) {
+          chunks.push(packedDecimal.slice(i, i + w));
+        }
+        return chunks.join(" ");
+      }
+
+      function truncateLongDecimal(s, maxLen) {
+        if (!s || s.length <= maxLen) return s;
+        return s.slice(0, maxLen) + "… (" + s.length + " цифр всего)";
+      }
+
+      /**
+       * Наглядный блок «числитель N ÷ знаменатель H = результат» для методов длинной арифметики.
+       * @param {Object} meta — pack из integrateLongIntegerRepunitDivide
+       * @param {number} y0
+       * @param {boolean} isImplicit
+       * @returns {DocumentFragment}
+       */
+      function buildLongRepunitDivisionShowcase(meta, y0, isImplicit) {
+        var frag = document.createDocumentFragment();
+        if (!meta || !meta.signedInts || !meta.signedInts.length) return frag;
+
+        var m = meta.signedInts.length;
+        var W = meta.blockWidth;
+        var p = meta.scalePow;
+        var scale = Math.pow(10, p);
+        var uBlocks = formatLongArithBlockLine(meta.biased, W, false);
+        var qBlocks = formatLongArithBlockLine(meta.signedInts, W, true);
+        var hBlocks = formatRepunitBlockLine(m, W);
+        var nSpaced = formatPackedWithBlockSpaces(meta.packedDecimal, W);
+        var nGlued = truncateLongDecimal(meta.packedDecimal, 96);
+        var hGlued = truncateLongDecimal(meta.repunitDecimal, 64);
+
+        var h4 = document.createElement("h4");
+        h4.className = "method-detail-subtitle";
+        h4.style.marginTop = "1rem";
+        h4.textContent = "Числитель N, знаменатель H и результат «деления»";
+        frag.appendChild(h4);
+
+        var intro = document.createElement("p");
+        intro.className = "method-detail-note";
+        intro.style.margin = "0 0 0.55rem";
+        intro.style.fontSize = "0.78rem";
+        intro.textContent =
+          "Основание блоков R = 10^W, W = " +
+          W +
+          ", смещение B = " +
+          meta.bias +
+          ", p = " +
+          p +
+          " (масштаб 10^p). " +
+          (isImplicit
+            ? "qᵢ = round(Δxᵢ·f(xᵢ₊₁)) — f на правом конце шага (неявный Эйлер при y′=f(x))."
+            : "qᵢ = round(Δxᵢ·f(xᵢ)) — f на левом конце шага (явный Эйлер).") +
+          " Кодирование: uᵢ = qᵢ + B ≥ 0; восстановление qᵢ = uᵢ − B.";
+        frag.appendChild(intro);
+
+        var box = document.createElement("div");
+        box.className = "method-detail-long-arith";
+
+        function addRow(label, text, titleOpt) {
+          var row = document.createElement("div");
+          row.className = "la-row";
+          var lbl = document.createElement("span");
+          lbl.className = "la-label";
+          lbl.textContent = label;
+          row.appendChild(lbl);
+          if (titleOpt) {
+            var hint = document.createElement("span");
+            hint.textContent = titleOpt;
+            row.appendChild(hint);
+          }
+          box.appendChild(row);
+          var pre = document.createElement("code");
+          pre.className = "method-detail-block-line";
+          pre.textContent = text;
+          box.appendChild(pre);
+        }
+
+        addRow(
+          "N (блоки uᵢ, qᵢ = uᵢ − B):",
+          uBlocks + "\n→ q: " + qBlocks,
+          "Числитель — одно длинное целое без знака минус внутри блока."
+        );
+        addRow(
+          "N (склеено, нули между блоками):",
+          nSpaced,
+          "То же N = u₀ + u₁·R + u₂·R² + … в десятичной записи."
+        );
+        addRow(
+          "H = 111…1 (repunit, m = " + m + " блоков):",
+          hBlocks,
+          "В каждом «разряде» R стоит 1: H = 1 + R + R² + … + R^{m−1}."
+        );
+
+        var dividePre = document.createElement("pre");
+        dividePre.className = "method-detail-divide-rule";
+        dividePre.textContent =
+          "Формальная запись (аналог B(z)/(1−z), не школьное частное N/H):\n\n" +
+          "  N = " +
+          nGlued +
+          "\n" +
+          "÷ H = " +
+          hGlued +
+          "   ← repunit из " +
+          m +
+          " единиц в блоках R\n" +
+          "────────────────────────────────────────\n" +
+          "  «Частное» по смыслу ряда: Sₙ = q₀ + q₁ + … + qₙ₋₁\n" +
+          "  yₙ = y₀ + Sₙ / 10^p\n\n" +
+          "Буквальное целое N ÷ H в десятичной системе даёт другой смысл; здесь «деление» = префиксное суммирование qᵢ после расшифровки uᵢ − B.";
+        box.appendChild(dividePre);
+
+        frag.appendChild(box);
+
+        var sub2 = document.createElement("h4");
+        sub2.className = "method-detail-subtitle";
+        sub2.style.marginTop = "0.75rem";
+        sub2.textContent = "Пошаговое накопление Σq (результат «деления»)";
+        frag.appendChild(sub2);
+
+        var stbl = document.createElement("table");
+        stbl.className = "method-detail-table";
+        var sthead = document.createElement("thead");
+        var shr = document.createElement("tr");
+        ["i", "bᵢ = Δx·f", "qᵢ", "uᵢ", "Σq = Sᵢ", "y = y₀ + Σq/10^p"].forEach(function (ht) {
+          var thc = document.createElement("th");
+          thc.textContent = ht;
+          shr.appendChild(thc);
+        });
+        sthead.appendChild(shr);
+        stbl.appendChild(sthead);
+        var stb = document.createElement("tbody");
+        var rows = meta.stepRows || [];
+        for (var ri = 0; ri < m; ri++) {
+          var trs = document.createElement("tr");
+          function tds(v) {
+            var td = document.createElement("td");
+            td.textContent = v;
+            trs.appendChild(td);
+          }
+          tds(String(ri));
+          var sr = rows[ri];
+          tds(sr ? fmtTableNum(sr.b) : "—");
+          tds(String(meta.signedInts[ri]));
+          tds(String(meta.biased[ri]));
+          tds(String(meta.prefixQ[ri]));
+          tds(fmtTableNum(y0 + meta.prefixQ[ri] / scale));
+          stb.appendChild(trs);
+        }
+        stbl.appendChild(stb);
+        frag.appendChild(stbl);
+
+        if (meta.packedDecimal.length > 96) {
+          var det = document.createElement("details");
+          det.style.marginTop = "0.55rem";
+          det.style.fontSize = "0.78rem";
+          var sum = document.createElement("summary");
+          sum.style.cursor = "pointer";
+          sum.style.color = "#0969da";
+          sum.style.fontWeight = "600";
+          sum.textContent = "Полная десятичная запись N (" + meta.packedDecimal.length + " цифр)";
+          det.appendChild(sum);
+          var fullPre = document.createElement("pre");
+          fullPre.className = "method-detail-block-line";
+          fullPre.style.marginTop = "0.45rem";
+          fullPre.textContent = formatPackedWithBlockSpaces(meta.packedDecimal, W);
+          det.appendChild(fullPre);
+          frag.appendChild(det);
+        }
+
+        return frag;
+      }
+
       function hideMethodDetailPane() {
         var stack = document.getElementById("methodDetailStack");
         if (stack) stack.innerHTML = "";
@@ -1257,7 +1665,11 @@
         var thead = document.createElement("thead");
         var hr = document.createElement("tr");
         var isDiscrete = label === "Дискретный ряд: B(z)/(1−z)";
+        var isLongRepunit = label === "Длинное целое: N ÷ (111…1)";
+        var isLongRepunitImpl = label === "Длинное целое (неявн.): N ÷ (111…1)";
+        var lrMetaImpl = lastRunContext && lastRunContext.longRepunitImplMeta ? lastRunContext.longRepunitImplMeta : null;
         var isExact = label === "Точное y(x)";
+        var lrMeta = lastRunContext && lastRunContext.longRepunitMeta ? lastRunContext.longRepunitMeta : null;
         function th(txt, titleOpt) {
           var e = document.createElement("th");
           e.textContent = txt;
@@ -1269,6 +1681,11 @@
         th("yₙ");
         th("Δxₙ");
         if (isDiscrete) th("bₙ₋₁ = Δx·f(xₙ₋₁)", "Вклад шага; для y′=f(x) совпадает с yₙ−yₙ₋₁.");
+        if (isLongRepunit || isLongRepunitImpl) {
+          th("qₙ₋₁", "Целая «цифра» round(b·10^p), b = Δx·f");
+          th("uₙ₋₁", "u = q + B (смещение; все u ≥ 0 в N)");
+          th("Σq", "Префиксная сумма q после «÷ (111…1)»");
+        }
         var exactFn = lastRunContext && lastRunContext.exactFn ? lastRunContext.exactFn : null;
         var compareExact = Boolean(exactFn) && !isExact;
         if (compareExact) {
@@ -1297,6 +1714,11 @@
           if (i === 0) {
             td("—");
             if (isDiscrete) td("—");
+            if (isLongRepunit || isLongRepunitImpl) {
+              td("—");
+              td("—");
+              td("—");
+            }
           } else {
             var dx = xs[i] - xs[i - 1];
             td(fmtTableNum(dx));
@@ -1306,6 +1728,17 @@
               } else {
                 td("—");
               }
+            }
+            var lrUse = isLongRepunitImpl ? lrMetaImpl : lrMeta;
+            if ((isLongRepunit || isLongRepunitImpl) && lrUse) {
+              var si = i - 1;
+              td(String(lrUse.signedInts[si]));
+              td(String(lrUse.biased[si]));
+              td(String(lrUse.prefixQ[si]));
+            } else if (isLongRepunit || isLongRepunitImpl) {
+              td("—");
+              td("—");
+              td("—");
             }
           }
           if (compareExact) {
@@ -1357,6 +1790,12 @@
           hint.textContent =
             "Чтобы появились столбцы «y этал.», «δₙ» и итоговые ‖δ‖₂ и RMSE, задайте «Точное решение y(x)» и выполните расчёт.";
           frag.appendChild(hint);
+        }
+        var lrNoteMeta = isLongRepunitImpl ? lrMetaImpl : lrMeta;
+        if ((isLongRepunit || isLongRepunitImpl) && lrNoteMeta) {
+          var y0Val =
+            lastRunContext && typeof lastRunContext.y0 === "number" ? lastRunContext.y0 : ys[0];
+          frag.appendChild(buildLongRepunitDivisionShowcase(lrNoteMeta, y0Val, isLongRepunitImpl));
         }
         if (isExact) {
           var note = document.createElement("p");
@@ -1568,7 +2007,7 @@
                   }
                 }
               },
-              title: { display: true, text: "Эйлер, РК, Розенброк, дискретный ряд (если y′=f(x)) и эталон", color: "#8b9cb3" }
+              title: { display: true, text: "Эйлер, РК, Розенброк, B/(1−z), N÷(111…1) (если y′=f(x)) и эталон", color: "#8b9cb3" }
             },
             /* Линейные оси: данные в формате {x, y} (см. toPoints), не категориальные подписи. */
             scales: {
@@ -1764,7 +2203,7 @@
               x0: 0,
               x1: 2.5,
               h: 0.12,
-              note: "Правая часть только от x; на графике появляется кривая «Дискретный ряд: B(z)/(1−z)» (совпадает с явным Эйлером на этой сетке)."
+              note: "Правая часть только от x; на графике — «Дискретный ряд B(z)/(1−z)» и «Длинное целое N÷(111…1)» (на этой сетке совпадают с явным Эйлером с точностью до округления qᵢ)."
             },
             {
               id: "fx_poly_quadratic",
@@ -2270,14 +2709,28 @@
           return;
         }
 
-        /* Если f не зависит от y: кривая через формальное B(z)/(1−z) на узлах явного Эйлера. */
+        /* Если f не зависит от y: B(z)/(1−z) и длинное целое N÷(111…1) на сетке явного Эйлера. */
         var discreteQuotRes = null;
+        var longRepunitRes = null;
+        var longRepunitImplRes = null;
         if (rhsDependsOnlyOnX(f, x0, x1)) {
           try {
             discreteQuotRes = integrateDiscreteSeriesDivideOneMinusZ(f, exE.xs, y0);
             parseLines.push("Доп.: y′=f(x) — дискретный ряд B(z)/(1−z) на сетке явного Эйлера (без полинома по f).");
           } catch (eDisc) {
             discreteQuotRes = null;
+          }
+          try {
+            longRepunitRes = integrateLongIntegerRepunitDivide(f, exE.xs, y0, null, "left");
+            longRepunitImplRes = integrateLongIntegerRepunitDivide(f, exE.xs, y0, null, "right");
+            parseLines.push(
+              "Доп.: y′=f(x) — длинное целое N÷(111…1): qᵢ=round(bᵢ·10^" +
+                LONG_ARITH_DECIMALS +
+                "), uᵢ=qᵢ+B, префиксная Σq (аналог B/(1−z))."
+            );
+          } catch (eLong) {
+            longRepunitRes = null;
+            longRepunitImplRes = null;
           }
         }
 
@@ -2399,6 +2852,30 @@
             borderDash: [6, 3]
           });
         }
+        if (longRepunitRes) {
+          datasets.push({
+            label: "Длинное целое: N ÷ (111…1)",
+            data: toPoints(longRepunitRes.xs, longRepunitRes.ys),
+            borderColor: "rgb(20, 184, 166)",
+            backgroundColor: "rgba(20, 184, 166, 0.14)",
+            tension: 0.1,
+            pointRadius: 2,
+            borderWidth: 2,
+            borderDash: [2, 4]
+          });
+        }
+        if (longRepunitImplRes) {
+          datasets.push({
+            label: "Длинное целое (неявн.): N ÷ (111…1)",
+            data: toPoints(longRepunitImplRes.xs, longRepunitImplRes.ys),
+            borderColor: "rgb(6, 95, 70)",
+            backgroundColor: "rgba(6, 95, 70, 0.14)",
+            tension: 0.1,
+            pointRadius: 2,
+            borderWidth: 2,
+            borderDash: [5, 2]
+          });
+        }
         if (exactPts) {
           /* Ряд «точное» добавляется после численных кривых (и после дискретного B/(1−z), если он есть). */
           datasets.push({
@@ -2443,6 +2920,20 @@
             xs: discreteQuotRes.xs,
             ys: discreteQuotRes.ys
           };
+        }
+        if (longRepunitRes) {
+          lastRunContext.trajectories["Длинное целое: N ÷ (111…1)"] = {
+            xs: longRepunitRes.xs,
+            ys: longRepunitRes.ys
+          };
+          lastRunContext.longRepunitMeta = longRepunitRes.meta;
+        }
+        if (longRepunitImplRes) {
+          lastRunContext.trajectories["Длинное целое (неявн.): N ÷ (111…1)"] = {
+            xs: longRepunitImplRes.xs,
+            ys: longRepunitImplRes.ys
+          };
+          lastRunContext.longRepunitImplMeta = longRepunitImplRes.meta;
         }
         if (exactPts) {
           var exXs = [];
