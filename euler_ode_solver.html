@@ -167,8 +167,122 @@
       pointer-events: none;
     }
     #chartPanel.is-cleared .method-toggles-wrap,
-    #chartPanel.is-cleared .method-detail-stack {
+    #chartPanel.is-cleared .method-detail-stack,
+    #chartPanel.is-cleared .picard-iter-bar,
+    #chartPanel.is-cleared #picardIterPanel {
       display: none;
+    }
+    .picard-iter-bar {
+      margin-top: 0.85rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid #30363d;
+    }
+    button.picard-iter-open-btn {
+      font-size: 0.88rem;
+      padding: 0.45rem 0.85rem;
+      border-radius: 6px;
+      border: 1px solid #388bfd;
+      background: rgba(56, 139, 253, 0.12);
+      color: #58a6ff;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button.picard-iter-open-btn:hover:not(:disabled) {
+      background: rgba(56, 139, 253, 0.22);
+    }
+    button.picard-iter-open-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      border-color: #30363d;
+      color: var(--muted);
+      background: transparent;
+    }
+    .picard-iter-bar.picard-iter-warn,
+    #picardIterPanel.picard-iter-warn {
+      border-color: rgba(248, 81, 73, 0.55);
+    }
+    button.picard-iter-open-btn.picard-iter-warn {
+      border-color: #f85149;
+      background: rgba(248, 81, 73, 0.14);
+      color: #ff7b72;
+    }
+    button.picard-iter-open-btn.picard-iter-warn:hover:not(:disabled) {
+      background: rgba(248, 81, 73, 0.26);
+    }
+    .method-toggle-block.method-picard-warn .method-dot {
+      box-shadow: 0 0 0 2px rgba(248, 81, 73, 0.55);
+    }
+    .method-toggle-block.method-picard-warn .method-name::after {
+      content: " · расходится";
+      color: #ff7b72;
+      font-weight: 600;
+      font-size: 0.78em;
+    }
+    button.method-detail-btn.method-picard-warn {
+      border-color: rgba(248, 81, 73, 0.65);
+      color: #ff7b72;
+    }
+    #picardIterStatus.picard-iter-warn {
+      color: #ff7b72;
+    }
+    #picardIterPanel {
+      margin-top: 1rem;
+      padding: 0.85rem 1rem;
+      border-radius: 8px;
+      border: 1px solid #30363d;
+      background: rgba(15, 20, 25, 0.55);
+    }
+    #picardIterPanel[hidden] {
+      display: none !important;
+    }
+    .picard-iter-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem 0.65rem;
+      margin-bottom: 0.55rem;
+    }
+    .picard-iter-controls button {
+      font-size: 0.85rem;
+      padding: 0.35rem 0.7rem;
+      border-radius: 6px;
+      border: 1px solid #30363d;
+      background: var(--bg);
+      color: var(--text);
+      cursor: pointer;
+    }
+    .picard-iter-controls button:hover:not(:disabled) {
+      border-color: #58a6ff;
+      color: #58a6ff;
+    }
+    .picard-iter-controls button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    #picardIterPanel.picard-iter-warn .picard-iter-controls button:not(:disabled) {
+      border-color: rgba(248, 81, 73, 0.55);
+    }
+    #picardIterStatus {
+      font-size: 0.9rem;
+      font-weight: 650;
+      color: var(--text);
+      min-width: 10rem;
+    }
+    #picardIterCaption {
+      margin: 0 0 0.5rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+    .picard-iter-chart-wrap {
+      height: 360px;
+      margin-top: 0.35rem;
+    }
+    .picard-iter-legend-hint {
+      margin-top: 0.45rem;
+      font-size: 0.76rem;
+      color: var(--muted);
+      line-height: 1.4;
     }
     #chartPanel.is-cleared .chart-empty-hint {
       display: flex;
@@ -469,7 +583,7 @@
     <div class="header-top">
       <div>
         <h1>ДУ первого порядка: Эйлер, Рунге–Кутта и Розенброк</h1>
-        <div class="sub">y′ = f(x, y). На графике <strong>одновременно</strong>: явный и неявный Эйлер, RK4, метод Хойна (RK2), линейно-неявный шаг Розенброка–Эйлера (численный ∂f/∂y); если f <strong>не зависит от y</strong>, дополнительно — дискретный ряд B(z)/(1−z) и длинное целое N÷(111…1) на той же сетке (без полиномиальной подгонки f). Строка <strong>нормализуется</strong> (см. ниже), затем выполняется как JavaScript: <code>x</code>, <code>y</code>; <code>Math.*</code>; «школьные» обозначения: <code>sh</code>/<code>ch</code>/<code>csh</code>/<code>th</code>, <code>sch</code>/<code>cth</code>/<code>csch</code>, <code>ln</code>/<code>lg</code>/<code>lb</code>, <code>log10</code>/<code>log2</code> и т.д.</div>
+        <div class="sub">y′ = f(x, y). На графике <strong>одновременно</strong>: явный и неявный Эйлер, RK4, метод Хойна (RK2), линейно-неявный шаг Розенброка–Эйлера (численный ∂f/∂y), <strong>последовательные приближения в длинной арифметике</strong> (неявный Эйлер + Пикар + N÷111…1); если f <strong>не зависит от y</strong>, дополнительно — дискретный ряд B(z)/(1−z) и явное/неявное длинное целое. Строка <strong>нормализуется</strong> (см. ниже), затем выполняется как JavaScript: <code>x</code>, <code>y</code>; <code>Math.*</code>; «школьные» обозначения: <code>sh</code>/<code>ch</code>/<code>csh</code>/<code>th</code>, <code>sch</code>/<code>cth</code>/<code>csch</code>, <code>ln</code>/<code>lg</code>/<code>lb</code>, <code>log10</code>/<code>log2</code> и т.д.</div>
       </div>
       <div class="header-tools" aria-label="История расчётов и файл состояния">
         <label for="historyMaxStates">Шагов истории</label>
@@ -554,6 +668,32 @@
       <div class="method-toggles-wrap">
         <div class="method-toggles-hint">Галочки включают или скрывают кривую. Наведите курсор на название метода — краткое описание шага.</div>
         <div id="chartLegendToggles" class="method-toggles" role="group" aria-label="Видимость рядов на графике"></div>
+      </div>
+      <div class="picard-iter-bar">
+        <button
+          type="button"
+          id="btnPicardIterOpen"
+          class="picard-iter-open-btn"
+          disabled
+          title="Пошаговый просмотр yy⁽⁰⁾, yy⁽¹⁾, … до сходимости (после расчёта метода последовательных приближений)"
+        >
+          График итераций Пикара (последоват. приближения)
+        </button>
+      </div>
+      <div id="picardIterPanel" hidden aria-label="Визуализация глобальных итераций Пикара">
+        <div class="picard-iter-controls">
+          <button type="button" id="picardIterPrev" disabled aria-label="Предыдущая итерация">← Предыд.</button>
+          <span id="picardIterStatus">—</span>
+          <button type="button" id="picardIterNext" disabled aria-label="Следующая итерация">След. →</button>
+          <button type="button" id="picardIterClose" aria-label="Скрыть панель итераций">Скрыть</button>
+        </div>
+        <p id="picardIterCaption"></p>
+        <div class="chart-wrap picard-iter-chart-wrap">
+          <canvas id="picardIterChart" role="img" aria-label="График yy на текущей итерации Пикара"></canvas>
+        </div>
+        <p class="picard-iter-legend-hint">
+          Тонкая бледно-зелёная — точное y(x) (если задано в форме); фиолетовая — текущее yy⁽ᵏ⁾; серая пунктир — предыдущее yy⁽ᵏ⁻¹⁾; яркая зелёная пунктир — сходившее yy на промежуточных шагах.
+        </p>
       </div>
       <div id="methodDetailStack" class="method-detail-stack" aria-live="polite"></div>
     </div>
@@ -1016,6 +1156,69 @@
 
       /** Число десятичных знаков при переводе bᵢ = Δx·f в целые «цифры» длинной арифметики. */
       var LONG_ARITH_DECIMALS = 8;
+      /** Подпись ряда: неявный Эйлер + Пикар + длинное целое N÷(111…1). */
+      var LABEL_LONG_PICARD = "Метод последовательных приближений в длинной арифметике";
+      /** Глобальные итерации Пикара: yy^{k+1} = (111…1)·h·ff(yy^{k}). */
+      var LONG_PICARD_MAX_ITER = 50;
+      var LONG_PICARD_ABS_TOL = 1e-11;
+      var LONG_PICARD_REL_TOL = 1e-10;
+      /** Остановка глобального Пикара, если |yᵢ| превышает порог (жёсткие задачи, напр. Prothero–Robinson). */
+      var LONG_PICARD_YS_ABS_MAX = 1e10;
+      /** Сколько раз уменьшать шаг сетки в 2 раза, если Пикар не сошёлся (1-я попытка — исходный h). */
+      var LONG_PICARD_STEP_REFINE_MAX = 5;
+
+      /**
+       * Целое для упаковки в N без экспоненциальной записи (иначе BigInt ломается).
+       * @param {number} n
+       * @returns {string}
+       */
+      function formatIntegerForPack(n) {
+        n = Math.trunc(n);
+        if (!Number.isFinite(n)) {
+          throw new Error("упаковка N: нечисловое значение блока");
+        }
+        if (!Number.isSafeInteger(n)) {
+          throw new Error(
+            "упаковка N: величина " + n + " не помещается в точное целое JavaScript"
+          );
+        }
+        return String(n);
+      }
+
+      /** Проверка, что вектор yy на сетке не разошёлся (Inf/огромные значения). */
+      function picardIteratesAreHealthy(ys) {
+        if (!ys || !ys.length) return false;
+        for (var i = 0; i < ys.length; i++) {
+          if (!isFinite(ys[i]) || Math.abs(ys[i]) > LONG_PICARD_YS_ABS_MAX) return false;
+        }
+        return true;
+      }
+
+      /**
+       * Минимальный meta, если финальная упаковка N невозможна (расходимость Пикара на жёсткой задаче).
+       */
+      function makeFallbackPicardPack(scalePow, errMsg, yyFinal, yyPackCur, ffPack) {
+        var m = yyFinal && yyFinal.qs ? yyFinal.qs.length : 0;
+        return {
+          N: 0n,
+          H: 1n,
+          bias: 0,
+          blockWidth: 1,
+          radix: 10n,
+          biased: [],
+          signedInts: yyFinal && yyFinal.qs ? yyFinal.qs.slice() : [],
+          packedDecimal: "",
+          repunitDecimal: m > 0 ? "1".repeat(m) : "1",
+          scalePow: scalePow,
+          prefixQ: yyFinal && yyFinal.prefixQ ? yyFinal.prefixQ.slice() : [],
+          stepRows: yyFinal && yyFinal.stepRows ? yyFinal.stepRows : [],
+          method: "picard-global",
+          yyPack: yyPackCur || null,
+          ffPack: ffPack || null,
+          packUnavailable: true,
+          packError: String(errMsg || "упаковка N недоступна")
+        };
+      }
 
       /**
        * Упаковка массива знаковых целых qᵢ в одно длинное целое N без переносов между блоками.
@@ -1052,7 +1255,7 @@
         var blockWidth = maxDigit === 0 ? 1 : String(maxDigit).length + 1;
         var blocks = [];
         for (var k = 0; k < n; k++) {
-          blocks.push(String(biased[k]).padStart(blockWidth, "0"));
+          blocks.push(formatIntegerForPack(biased[k]).padStart(blockWidth, "0"));
         }
         var packedDecimal = blocks.join("");
         var N = BigInt(packedDecimal);
@@ -1148,6 +1351,353 @@
         pack.endpoint = endpoint;
         pack.stepRows = stepRows;
         return { xs: xs.slice(), ys: ys, meta: pack, stepRows: stepRows };
+      }
+
+      /** Упаковка вектора вещественных значений в длинное целое (блоки с нулями). */
+      function packScaledFloatArray(values, scalePow) {
+        var scale = Math.pow(10, scalePow);
+        var ints = [];
+        for (var i = 0; i < values.length; i++) {
+          ints.push(Math.round(values[i] * scale));
+        }
+        return packSignedStepsIntoLongInteger(ints);
+      }
+
+      /** Упаковка yy/ff для метаданных; при расходимости не ломает итерации Пикара. */
+      function packScaledFloatArrayOptional(values, scalePow) {
+        try {
+          return packScaledFloatArray(values, scalePow);
+        } catch (ePackOpt) {
+          return null;
+        }
+      }
+
+      /** f(xᵢ,yᵢ) на сетке (численный ff без длинного целого). */
+      function evalFOnGrid(f, xs, ys) {
+        if (ys.length !== xs.length) {
+          throw new Error("ff(yy): размер yy не совпадает с сеткой.");
+        }
+        var fvals = [];
+        for (var i = 0; i < xs.length; i++) {
+          var fi = f(xs[i], ys[i]);
+          if (!isFinite(fi)) {
+            throw new Error(
+              "ff(yy): f не конечно в (x,y)=(" + xs[i] + "," + ys[i] + ")."
+            );
+          }
+          fvals.push(fi);
+        }
+        return fvals;
+      }
+
+      /**
+       * yy = (111…1)·h·ff по массиву f(xᵢ,yᵢ); упаковка yy в длинное целое — по возможности.
+       */
+      function yyFromFvalsRepunit(xs, y0, fvals, scalePow) {
+        var scale = Math.pow(10, scalePow);
+        var n = xs.length;
+        if (fvals.length !== n) {
+          throw new Error("yy=(111…1)·h·ff: размер ff не совпадает с сеткой.");
+        }
+        var qs = [];
+        var stepRows = [];
+        for (var i = 0; i < n - 1; i++) {
+          var dx = xs[i + 1] - xs[i];
+          var fi = fvals[i];
+          var b = dx * fi;
+          var q = Math.round(b * scale);
+          qs.push(q);
+          stepRows.push({
+            dx: dx,
+            xEval: xs[i],
+            fval: fi,
+            b: b,
+            q: q
+          });
+        }
+        var prefixQ = formalRepunitPrefixSums(qs);
+        var ys = [y0];
+        for (var j = 0; j < prefixQ.length; j++) {
+          ys.push(y0 + prefixQ[j] / scale);
+        }
+        return {
+          ys: ys,
+          yyPack: packScaledFloatArrayOptional(ys, scalePow),
+          qs: qs,
+          prefixQ: prefixQ,
+          stepRows: stepRows
+        };
+      }
+
+      function picardRunIsWarning(meta) {
+        if (!meta) return false;
+        return !meta.picardConverged || !!meta.picardDiverged || !!meta.packUnavailable;
+      }
+
+      /** Распаковка длинного целого обратно в массив вещественных значений. */
+      function unpackPackToFloats(pack, scalePow) {
+        var scale = Math.pow(10, scalePow);
+        var out = [];
+        for (var i = 0; i < pack.signedInts.length; i++) {
+          out.push(pack.signedInts[i] / scale);
+        }
+        return out;
+      }
+
+      /**
+       * ff(yy): по упакованному разностному решению yy (y₀,…,yₙ) строит упакованный вектор
+       * (f(x₀,y₀), f(x₁,y₁), …, f(xₙ,yₙ)) — тоже «длинное» число.
+       */
+      function ffPackFromYy(f, xs, yyPack, scalePow) {
+        var ys = unpackPackToFloats(yyPack, scalePow);
+        if (ys.length !== xs.length) {
+          throw new Error(
+            "ff(yy): число блоков в yy (" + ys.length + ") не совпадает с числом узлов (" + xs.length + ")."
+          );
+        }
+        var fvals = [];
+        var scale = Math.pow(10, scalePow);
+        var fInts = [];
+        for (var i = 0; i < xs.length; i++) {
+          var fi = f(xs[i], ys[i]);
+          if (!isFinite(fi)) {
+            throw new Error(
+              "ff(yy): f не конечно в (x,y)=(" + xs[i] + "," + ys[i] + ")."
+            );
+          }
+          fvals.push(fi);
+          fInts.push(Math.round(fi * scale));
+        }
+        return { pack: packSignedStepsIntoLongInteger(fInts), fvals: fvals, ys: ys };
+      }
+
+      /**
+       * yy = (1,1,1…)·h·ff: префиксные суммы Δxᵢ·f(xᵢ,yᵢ) (repunit), y₀ фиксирован.
+       * На выходе — новый вектор y в узлах и его упаковка yy.
+       */
+      function yyFromRepunitTimesFf(xs, y0, ffPack, scalePow) {
+        var scale = Math.pow(10, scalePow);
+        var fAsY = unpackPackToFloats(ffPack, scalePow);
+        var n = xs.length;
+        if (fAsY.length !== n) {
+          throw new Error("yy=(111…1)·h·ff: размер ff не совпадает с сеткой.");
+        }
+        var qs = [];
+        var stepRows = [];
+        for (var i = 0; i < n - 1; i++) {
+          var dx = xs[i + 1] - xs[i];
+          var fi = fAsY[i];
+          var b = dx * fi;
+          var q = Math.round(b * scale);
+          qs.push(q);
+          stepRows.push({
+            dx: dx,
+            xEval: xs[i],
+            fval: fi,
+            b: b,
+            q: q
+          });
+        }
+        var prefixQ = formalRepunitPrefixSums(qs);
+        var ys = [y0];
+        for (var j = 0; j < prefixQ.length; j++) {
+          ys.push(y0 + prefixQ[j] / scale);
+        }
+        return {
+          ys: ys,
+          yyPack: packScaledFloatArray(ys, scalePow),
+          qs: qs,
+          prefixQ: prefixQ,
+          stepRows: stepRows
+        };
+      }
+
+      function picardGlobalConverged(ysOld, ysNew) {
+        for (var i = 0; i < ysNew.length; i++) {
+          var tol =
+            LONG_PICARD_ABS_TOL +
+            LONG_PICARD_REL_TOL * Math.max(1, Math.abs(ysNew[i]));
+          if (Math.abs(ysNew[i] - ysOld[i]) > tol) return false;
+        }
+        return true;
+      }
+
+      /**
+       * Глобальный Пикар в длинной арифметике: yy — упакованное (y₀,…,yₙ);
+       * yy^{k+1} = (111…1)·h·ff(yy^{k}), ff(yy)=(f(x₀,y₀),…,f(xₙ,yₙ)).
+       * Старт: yy⁽⁰⁾ с y₀ в узле 0 и yᵢ=f(x₀,y₀) на остальных (первая итерация из f(x₀,y₀)).
+       */
+      function integrateLongPicardSuccessiveApprox(f, xs, y0, scalePow, maxIter) {
+        scalePow = scalePow == null ? LONG_ARITH_DECIMALS : scalePow;
+        maxIter = maxIter == null ? LONG_PICARD_MAX_ITER : maxIter;
+        var n = xs.length;
+        if (n < 2) {
+          throw new Error("Последоват. прибл.: нужно не менее двух узлов сетки.");
+        }
+        var f00 = f(xs[0], y0);
+        if (!isFinite(f00)) {
+          throw new Error("Последоват. прибл.: f(x₀,y₀) не конечно.");
+        }
+        var ysCur = [y0];
+        for (var i = 1; i < n; i++) {
+          ysCur.push(f00);
+        }
+        var yyPackCur = packScaledFloatArrayOptional(ysCur, scalePow);
+        var iterLog = [
+          {
+            k: 0,
+            ys: ysCur.slice(),
+            yyPack: yyPackCur,
+            ffPack: null,
+            label: "yy⁽⁰⁾: y₀ в x₀, yᵢ=f(x₀,y₀) на i≥1"
+          }
+        ];
+        var converged = false;
+        var picardDiverged = false;
+        var picardIterError = null;
+        var globalIter = 0;
+        for (var k = 0; k < maxIter; k++) {
+          try {
+            var fvalsK = evalFOnGrid(f, xs, ysCur);
+            var yyRes = yyFromFvalsRepunit(xs, y0, fvalsK, scalePow);
+            globalIter = k + 1;
+            var ffPackK = null;
+            try {
+              ffPackK = packScaledFloatArrayOptional(fvalsK, scalePow);
+            } catch (eFfPack) {
+              ffPackK = null;
+            }
+            iterLog.push({
+              k: globalIter,
+              ys: yyRes.ys.slice(),
+              yyPack: yyRes.yyPack,
+              ffPack: ffPackK,
+              label: "yy⁽" + globalIter + "⁾ = (111…1)·h·ff(yy⁽" + k + "⁾)"
+            });
+            if (!picardIteratesAreHealthy(yyRes.ys)) {
+              picardDiverged = true;
+            }
+            if (picardGlobalConverged(ysCur, yyRes.ys)) {
+              converged = true;
+              ysCur = yyRes.ys;
+              yyPackCur = yyRes.yyPack;
+              break;
+            }
+            ysCur = yyRes.ys;
+            yyPackCur = yyRes.yyPack;
+          } catch (eIterPicard) {
+            picardDiverged = true;
+            picardIterError = String(eIterPicard.message || eIterPicard);
+            break;
+          }
+        }
+        if (!converged && globalIter >= maxIter) {
+          picardDiverged = true;
+        }
+        var ffFinal = null;
+        var yyFinal = null;
+        var pack;
+        try {
+          if (!picardIteratesAreHealthy(ysCur)) {
+            throw new Error(
+              "глобальный Пикар: |y| превысило " + LONG_PICARD_YS_ABS_MAX + " (типично для жёстких y′=f(x,y), напр. Prothero–Robinson)"
+            );
+          }
+          ffFinal = ffPackFromYy(f, xs, yyPackCur, scalePow);
+          yyFinal = yyFromRepunitTimesFf(xs, y0, ffFinal.pack, scalePow);
+          pack = packSignedStepsIntoLongInteger(yyFinal.qs);
+          pack.method = "picard-global";
+          pack.yyPack = yyPackCur;
+          pack.ffPack = ffFinal.pack;
+        } catch (ePackPicard) {
+          if (!yyFinal) {
+            yyFinal = { ys: ysCur.slice(), qs: [], prefixQ: [], stepRows: [] };
+          }
+          pack = makeFallbackPicardPack(
+            scalePow,
+            ePackPicard.message || ePackPicard,
+            yyFinal,
+            yyPackCur,
+            ffFinal ? ffFinal.pack : null
+          );
+        }
+        pack.scalePow = scalePow;
+        if (yyFinal) {
+          pack.prefixQ = yyFinal.prefixQ;
+          pack.stepRows = yyFinal.stepRows;
+        }
+        pack.picardIterLog = iterLog;
+        pack.picardGlobalIter = globalIter;
+        pack.picardConverged = converged;
+        pack.picardDiverged = picardDiverged;
+        pack.picardIterError = picardIterError;
+        pack.picardMaxIter = maxIter;
+        pack.picardAbsTol = LONG_PICARD_ABS_TOL;
+        pack.picardRelTol = LONG_PICARD_REL_TOL;
+        return {
+          xs: xs.slice(),
+          ys: ysCur,
+          ysFromLong: yyFinal ? yyFinal.ys : ysCur.slice(),
+          meta: pack,
+          stepRows: yyFinal ? yyFinal.stepRows : []
+        };
+      }
+
+      /** Успешная глобальная сходимость Пикара на текущей сетке. */
+      function picardAttemptConverged(meta) {
+        return !!(meta && meta.picardConverged && !meta.picardIterError);
+      }
+
+      /**
+       * Пикар на сетке явного Эйлера; при несходимости — до 5 попыток с шагом h, h/2, …
+       * На каждой попытке лимит глобальных итераций удваивается (50, 100, 200, …).
+       * После исчерпания попыток возвращается результат на самой мелкой сетке.
+       */
+      function integrateLongPicardWithStepRefinement(f, x0, x1, y0, h, scalePow) {
+        var lastRes = null;
+        var lastGridErr = null;
+        for (var r = 0; r < LONG_PICARD_STEP_REFINE_MAX; r++) {
+          var hTry = h / Math.pow(2, r);
+          var maxIterTry = LONG_PICARD_MAX_ITER * Math.pow(2, r);
+          var grid;
+          try {
+            grid = explicitEuler(f, x0, x1, y0, hTry);
+          } catch (eGrid) {
+            lastGridErr = eGrid;
+            break;
+          }
+          try {
+            lastRes = integrateLongPicardSuccessiveApprox(
+              f,
+              grid.xs,
+              y0,
+              scalePow,
+              maxIterTry
+            );
+          } catch (ePic) {
+            lastGridErr = ePic;
+            continue;
+          }
+          lastRes.meta.picardStepRefineIndex = r;
+          lastRes.meta.picardHForm = hTry;
+          lastRes.meta.picardHDivisor = Math.pow(2, r);
+          lastRes.meta.picardStepRefineMax = LONG_PICARD_STEP_REFINE_MAX;
+          lastRes.meta.picardGridNodes = grid.xs.length;
+          if (picardAttemptConverged(lastRes.meta)) {
+            lastRes.meta.picardStepRefineExhausted = false;
+            lastRes.meta.picardStepRefineUsed = r > 0;
+            return lastRes;
+          }
+        }
+        if (!lastRes) {
+          throw (
+            lastGridErr ||
+            new Error("Пикар: не удалось построить сетку или выполнить итерации.")
+          );
+        }
+        lastRes.meta.picardStepRefineExhausted = true;
+        lastRes.meta.picardStepRefineUsed = true;
+        return lastRes;
       }
 
       /**
@@ -1306,6 +1856,8 @@
           "Только y′=f(x), явный Эйлер: qᵢ=round(Δx·f(xᵢ)); упаковка N со смещением; ÷ repunit = Σqᵢ (анalog B/(1−z)).",
         "Длинное целое (неявн.): N ÷ (111…1)":
           "Только y′=f(x): qᵢ=round(Δx·f(xᵢ₊₁)) — f на правом конце шага; та же упаковка и ÷(111…1); = неявный Эйлер (без итераций по y).",
+        "Метод последовательных приближений в длинной арифметике":
+          "yy=(y₀,…,yₙ) и ff(yy) — длинные числа; yy^{k+1}=(111…1)·h·ff(yy^{k}) до сходимости (≤50 ит.); при несходимости шаг сетки h делится на 2 (до 5 попыток); затем N÷(111…1)=Σq.",
         "Точное y(x)":
           "Не численный интегратор: значения вашей формулы y(x) на плотной сетке по x для сравнения с методами."
       };
@@ -1382,6 +1934,20 @@
           "Умножение N на R (сдвиг блоков) **не** превращает явный метод в неявный: qᵢ(неявн.) = round(Δxᵢ·f(xᵢ₊₁)) обычно ≠ сдвинутому qᵢ(явн.). «Сдвиг» — смена **индекса узла в f**.",
           "Числитель N и знаменатель H = 111…1 (repunit из m блоков-единиц) строятся так же, как у явного варианта; ниже показаны N, H и результат «деления» — префиксные суммы Σq и yₙ = y₀ + (Σq)/10^p.",
           "На графике кривая совпадает с **неявным** Эйлером (до округления qᵢ). Если f зависит от y, «цифру» шага нельзя выписать заранее — одного N и repunit недостаточно."
+        ],
+        "Метод последовательных приближений в длинной арифметике": [
+          "Постановка y′ = f(x, y). **yy** = (y₀, y₁, …, yₙ) — разностное решение на сетке, склеенное в одно длинное целое (блоки с нулями, как N в других методах).",
+          "Разностная форма неявного Эйлера записывается **целиком по вектору**: yy = (1, 1, 1, …) · h · **ff(yy)**, где **ff(yy)** = (f(x₀, y₀), f(x₁, y₁), …, f(xₙ, yₙ)) — тоже неизвестное «длинное» число (отдельная упаковка блоков f).",
+          "Оператор (1,1,1…)·h·ff — тот же смысл, что «÷ на repunit 111…1»: префиксные суммы вкладов Δxᵢ·f(xᵢ, yᵢ) из ff, плюс y₀ в начале (формально B(z)/(1−z) по коэффициентам шага).",
+          "**Пикар по всей сетке сразу:** yy⁽⁰⁾ — старт: y₀ в узле x₀, на остальных узлах yᵢ = f(x₀, y₀); ff⁽⁰⁾ = ff(yy⁽⁰⁾); **yy⁽¹⁾ = (111…1)·h·ff⁽⁰⁾**; далее yy⁽²⁾ = (111…1)·h·ff(yy⁽¹⁾), … до сходимости ‖yy⁽ᵏ⁺¹⁾ − yy⁽ᵏ⁾‖ по узлам ≤ " +
+            LONG_PICARD_ABS_TOL +
+            " + " +
+            LONG_PICARD_REL_TOL +
+            "·max(1,|y|) или не более " +
+            LONG_PICARD_MAX_ITER +
+            " глобальных итераций.",
+          "Если на сетке с исходным |h| из формы глобальный Пикар не сошёлся, шаг **делится на 2** и расчёт повторяется (до **5** попыток: h, h/2, …, h/16); одновременно лимит глобальных итераций **удваивается** (50, 100, 200, …). Сошёлся на какой-то попытке — берётся эта сетка; иначе показывается результат на **самой мелкой** сетке.",
+          "После сходимости финальные qᵢ = round(Δxᵢ·f(xᵢ, yᵢ)·10^p) упаковываются в N; в «Подробном расчёте» показаны yy, ff и история итераций yy⁽ᵏ⁾."
         ],
         "Точное y(x)": [
           "Это не численное интегрирование ОДУ, а отдельная кривая: задаётся формула y(x) в поле «Точное решение», компилируется как функция от x.",
@@ -1495,12 +2061,47 @@
        * Наглядный блок «числитель N ÷ знаменатель H = результат» для методов длинной арифметики.
        * @param {Object} meta — pack из integrateLongIntegerRepunitDivide
        * @param {number} y0
-       * @param {boolean} isImplicit
+       * @param {'explicit'|'implicit'|'picard'} mode
        * @returns {DocumentFragment}
        */
-      function buildLongRepunitDivisionShowcase(meta, y0, isImplicit) {
+      function buildLongRepunitDivisionShowcase(meta, y0, mode) {
         var frag = document.createDocumentFragment();
-        if (!meta || !meta.signedInts || !meta.signedInts.length) return frag;
+        if (!meta) return frag;
+        if (meta.packUnavailable) {
+          var unav = document.createElement("p");
+          unav.className = "method-detail-note";
+          unav.style.marginTop = "0.75rem";
+          unav.style.fontSize = "0.78rem";
+          unav.textContent =
+            "Упаковка числителя N и формальное деление на (111…1) для этого прогона недоступны: " +
+            (meta.packError || "слишком большие или неустойчивые qᵢ.") +
+            " График yy⁽ᵏ⁾ и журнал итераций ниже всё равно можно смотреть.";
+          frag.appendChild(unav);
+          if (mode === "picard" && meta.yyPack && meta.ffPack) {
+            var h4p = document.createElement("h4");
+            h4p.className = "method-detail-subtitle";
+            h4p.style.marginTop = "0.65rem";
+            h4p.textContent = "Упакованные yy и ff(yy) (финальная итерация)";
+            frag.appendChild(h4p);
+            var preYy = document.createElement("pre");
+            preYy.className = "method-detail-block-line";
+            preYy.textContent = formatPackedWithBlockSpaces(
+              meta.yyPack.packedDecimal,
+              meta.yyPack.blockWidth
+            );
+            frag.appendChild(preYy);
+            var preFf = document.createElement("pre");
+            preFf.className = "method-detail-block-line";
+            preFf.style.marginTop = "0.45rem";
+            preFf.textContent = formatPackedWithBlockSpaces(
+              meta.ffPack.packedDecimal,
+              meta.ffPack.blockWidth
+            );
+            frag.appendChild(preFf);
+          }
+          return frag;
+        }
+        if (!meta.signedInts || !meta.signedInts.length) return frag;
 
         var m = meta.signedInts.length;
         var W = meta.blockWidth;
@@ -1523,6 +2124,20 @@
         intro.className = "method-detail-note";
         intro.style.margin = "0 0 0.55rem";
         intro.style.fontSize = "0.78rem";
+        var qExplain =
+          mode === "picard"
+            ? "Глобальный Пикар: yy⁽ᵏ⁺¹⁾=(111…1)·h·ff(yy⁽ᵏ⁾), ff=(f(x₀,y₀),…,f(xₙ,yₙ)). Сходимость по всем узлам: |Δy| ≤ " +
+              meta.picardAbsTol +
+              " + " +
+              meta.picardRelTol +
+              "·max(1,|y|), ≤ " +
+              meta.picardMaxIter +
+              " ит. (сошлось: " +
+              (meta.picardConverged ? "да, " + meta.picardGlobalIter + " ит." : "нет") +
+              "). qᵢ = round(Δxᵢ·f(xᵢ,yᵢ)·10^p) после финального yy."
+            : mode === "implicit"
+              ? "qᵢ = round(Δxᵢ·f(xᵢ₊₁)) — f на правом конце (неявный Эйлер при y′=f(x))."
+              : "qᵢ = round(Δxᵢ·f(xᵢ)) — f на левом конце (явный Эйлер).";
         intro.textContent =
           "Основание блоков R = 10^W, W = " +
           W +
@@ -1531,10 +2146,40 @@
           ", p = " +
           p +
           " (масштаб 10^p). " +
-          (isImplicit
-            ? "qᵢ = round(Δxᵢ·f(xᵢ₊₁)) — f на правом конце шага (неявный Эйлер при y′=f(x))."
-            : "qᵢ = round(Δxᵢ·f(xᵢ)) — f на левом конце шага (явный Эйлер).") +
+          qExplain +
           " Кодирование: uᵢ = qᵢ + B ≥ 0; восстановление qᵢ = uᵢ − B.";
+        if (mode === "picard" && !meta.picardConverged) {
+          intro.textContent +=
+            " Внимание: глобальный Пикар не достиг критерия за " +
+            meta.picardMaxIter +
+            " итераций (использовано последнее yy⁽ᵏ⁾).";
+        }
+        if (mode === "picard" && meta.picardDiverged) {
+          intro.textContent +=
+            " Итерации остановлены: |y| > " +
+            LONG_PICARD_YS_ABS_MAX +
+            " — для жёстких задач (Prothero–Robinson и др.) глобальный Пикар на сетке явного Эйлера часто расходится; точное y = cos x при этом сохраняется.";
+        }
+        if (mode === "picard" && meta.picardHForm != null) {
+          intro.textContent +=
+            " Сетка Пикара: |h| = " +
+            fmtTableNum(Math.abs(meta.picardHForm)) +
+            (meta.picardHDivisor > 1 ? " (h_form / " + meta.picardHDivisor + ")" : " (как в форме)") +
+            ", узлов " +
+            (meta.picardGridNodes != null ? meta.picardGridNodes : "—") +
+            ", попытка " +
+            (meta.picardStepRefineIndex != null ? meta.picardStepRefineIndex + 1 : "?") +
+            " из " +
+            LONG_PICARD_STEP_REFINE_MAX +
+            ", ≤ " +
+            (meta.picardMaxIter != null ? meta.picardMaxIter : LONG_PICARD_MAX_ITER) +
+            " глоб. ит." +
+            (meta.picardStepRefineExhausted && !meta.picardConverged
+              ? " — сходимости нет даже на мелкой сетке."
+              : meta.picardStepRefineUsed
+                ? " — сходимость после уменьшения шага."
+                : ".");
+        }
         frag.appendChild(intro);
 
         var box = document.createElement("div");
@@ -1559,10 +2204,22 @@
           box.appendChild(pre);
         }
 
+        if (mode === "picard" && meta.yyPack && meta.ffPack) {
+          addRow(
+            "yy (разностное решение):",
+            formatPackedWithBlockSpaces(meta.yyPack.packedDecimal, meta.yyPack.blockWidth),
+            "Упакованный вектор (y₀,…,yₙ)."
+          );
+          addRow(
+            "ff(yy):",
+            formatPackedWithBlockSpaces(meta.ffPack.packedDecimal, meta.ffPack.blockWidth),
+            "Упакованный вектор (f(x₀,y₀),…,f(xₙ,yₙ)) при финальном yy."
+          );
+        }
         addRow(
-          "N (блоки uᵢ, qᵢ = uᵢ − B):",
+          "N (блоки qᵢ шагов, uᵢ = qᵢ + B):",
           uBlocks + "\n→ q: " + qBlocks,
-          "Числитель — одно длинное целое без знака минус внутри блока."
+          "Числитель шаговых вкладов после сходимости yy."
         );
         addRow(
           "N (склеено, нули между блоками):",
@@ -1605,7 +2262,9 @@
         stbl.className = "method-detail-table";
         var sthead = document.createElement("thead");
         var shr = document.createElement("tr");
-        ["i", "bᵢ = Δx·f", "qᵢ", "uᵢ", "Σq = Sᵢ", "y = y₀ + Σq/10^p"].forEach(function (ht) {
+        var stepHdr = ["i", "bᵢ = Δx·f", "qᵢ", "uᵢ", "Σq = Sᵢ", "y = y₀ + Σq/10^p"];
+        if (mode === "picard") stepHdr.push("глоб. k");
+        stepHdr.forEach(function (ht) {
           var thc = document.createElement("th");
           thc.textContent = ht;
           shr.appendChild(thc);
@@ -1628,10 +2287,37 @@
           tds(String(meta.biased[ri]));
           tds(String(meta.prefixQ[ri]));
           tds(fmtTableNum(y0 + meta.prefixQ[ri] / scale));
+          if (mode === "picard") {
+            tds(ri === 0 ? "—" : String(meta.picardGlobalIter));
+          }
           stb.appendChild(trs);
         }
         stbl.appendChild(stb);
         frag.appendChild(stbl);
+
+        if (mode === "picard" && meta.picardIterLog && meta.picardIterLog.length) {
+          var hPic = document.createElement("h4");
+          hPic.className = "method-detail-subtitle";
+          hPic.style.marginTop = "0.75rem";
+          hPic.textContent = "Глобальные итерации Пикара (yy и ff)";
+          frag.appendChild(hPic);
+          var picPre = document.createElement("pre");
+          picPre.className = "method-detail-mono-explain";
+          picPre.style.fontSize = "0.75rem";
+          var lines = [];
+          for (var li = 0; li < meta.picardIterLog.length; li++) {
+            var ent = meta.picardIterLog[li];
+            lines.push(ent.label + ":");
+            lines.push(
+              "  yy: y₀=" +
+                fmtTableNum(ent.ys[0]) +
+                (ent.ys.length > 1 ? ", y₁=" + fmtTableNum(ent.ys[1]) : "") +
+                (ent.ys.length > 2 ? ", …, yₙ=" + fmtTableNum(ent.ys[ent.ys.length - 1]) : "")
+            );
+          }
+          picPre.textContent = lines.join("\n");
+          frag.appendChild(picPre);
+        }
 
         if (meta.packedDecimal.length > 96) {
           var det = document.createElement("details");
@@ -1667,9 +2353,13 @@
         var isDiscrete = label === "Дискретный ряд: B(z)/(1−z)";
         var isLongRepunit = label === "Длинное целое: N ÷ (111…1)";
         var isLongRepunitImpl = label === "Длинное целое (неявн.): N ÷ (111…1)";
+        var isLongPicard = label === LABEL_LONG_PICARD;
         var lrMetaImpl = lastRunContext && lastRunContext.longRepunitImplMeta ? lastRunContext.longRepunitImplMeta : null;
         var isExact = label === "Точное y(x)";
         var lrMeta = lastRunContext && lastRunContext.longRepunitMeta ? lastRunContext.longRepunitMeta : null;
+        var lrMetaPicard =
+          lastRunContext && lastRunContext.longPicardMeta ? lastRunContext.longPicardMeta : null;
+        var isLongArith = isLongRepunit || isLongRepunitImpl || isLongPicard;
         function th(txt, titleOpt) {
           var e = document.createElement("th");
           e.textContent = txt;
@@ -1681,10 +2371,11 @@
         th("yₙ");
         th("Δxₙ");
         if (isDiscrete) th("bₙ₋₁ = Δx·f(xₙ₋₁)", "Вклад шага; для y′=f(x) совпадает с yₙ−yₙ₋₁.");
-        if (isLongRepunit || isLongRepunitImpl) {
+        if (isLongArith) {
           th("qₙ₋₁", "Целая «цифра» round(b·10^p), b = Δx·f");
           th("uₙ₋₁", "u = q + B (смещение; все u ≥ 0 в N)");
           th("Σq", "Префиксная сумма q после «÷ (111…1)»");
+          if (isLongPicard) th("глоб. k", "Число глобальных итераций Пикара до сходимости");
         }
         var exactFn = lastRunContext && lastRunContext.exactFn ? lastRunContext.exactFn : null;
         var compareExact = Boolean(exactFn) && !isExact;
@@ -1714,10 +2405,11 @@
           if (i === 0) {
             td("—");
             if (isDiscrete) td("—");
-            if (isLongRepunit || isLongRepunitImpl) {
+            if (isLongArith) {
               td("—");
               td("—");
               td("—");
+              if (isLongPicard) td("—");
             }
           } else {
             var dx = xs[i] - xs[i - 1];
@@ -1729,16 +2421,20 @@
                 td("—");
               }
             }
-            var lrUse = isLongRepunitImpl ? lrMetaImpl : lrMeta;
-            if ((isLongRepunit || isLongRepunitImpl) && lrUse) {
+            var lrUse = isLongPicard ? lrMetaPicard : isLongRepunitImpl ? lrMetaImpl : lrMeta;
+            if (isLongArith && lrUse) {
               var si = i - 1;
               td(String(lrUse.signedInts[si]));
               td(String(lrUse.biased[si]));
               td(String(lrUse.prefixQ[si]));
-            } else if (isLongRepunit || isLongRepunitImpl) {
+              if (isLongPicard) {
+                td(si === 0 ? "—" : String(lrUse.picardGlobalIter || "—"));
+              }
+            } else if (isLongArith) {
               td("—");
               td("—");
               td("—");
+              if (isLongPicard) td("—");
             }
           }
           if (compareExact) {
@@ -1791,11 +2487,12 @@
             "Чтобы появились столбцы «y этал.», «δₙ» и итоговые ‖δ‖₂ и RMSE, задайте «Точное решение y(x)» и выполните расчёт.";
           frag.appendChild(hint);
         }
-        var lrNoteMeta = isLongRepunitImpl ? lrMetaImpl : lrMeta;
-        if ((isLongRepunit || isLongRepunitImpl) && lrNoteMeta) {
+        var lrNoteMeta = isLongPicard ? lrMetaPicard : isLongRepunitImpl ? lrMetaImpl : lrMeta;
+        if (isLongArith && lrNoteMeta) {
           var y0Val =
             lastRunContext && typeof lastRunContext.y0 === "number" ? lastRunContext.y0 : ys[0];
-          frag.appendChild(buildLongRepunitDivisionShowcase(lrNoteMeta, y0Val, isLongRepunitImpl));
+          var showcaseMode = isLongPicard ? "picard" : isLongRepunitImpl ? "implicit" : "explicit";
+          frag.appendChild(buildLongRepunitDivisionShowcase(lrNoteMeta, y0Val, showcaseMode));
         }
         if (isExact) {
           var note = document.createElement("p");
@@ -1964,6 +2661,22 @@
           pr.textContent = paras[pi];
           algoEl.appendChild(pr);
         }
+        if (label === LABEL_LONG_PICARD && getPicardIterViewData()) {
+          var picLinkRow = document.createElement("p");
+          picLinkRow.style.marginTop = "0.65rem";
+          var picLinkBtn = document.createElement("button");
+          picLinkBtn.type = "button";
+          picLinkBtn.className = "picard-iter-open-btn";
+          if (LRC.longPicardMeta && picardRunIsWarning(LRC.longPicardMeta)) {
+            picLinkBtn.className += " picard-iter-warn";
+          }
+          picLinkBtn.textContent = "Открыть график итераций (Prev / Next)";
+          picLinkBtn.addEventListener("click", function () {
+            openPicardIterPanel();
+          });
+          picLinkRow.appendChild(picLinkBtn);
+          algoEl.appendChild(picLinkRow);
+        }
         tableWrap.appendChild(buildMethodDetailTable(label, LRC.trajectories[label]));
         stack.appendChild(pane);
         try {
@@ -2007,7 +2720,7 @@
                   }
                 }
               },
-              title: { display: true, text: "Эйлер, РК, Розенброк, B/(1−z), N÷(111…1) (если y′=f(x)) и эталон", color: "#8b9cb3" }
+              title: { display: true, text: "Эйлер, РК, Розенброк, длинн. арифм. (N÷111…1, Пикар) и эталон", color: "#8b9cb3" }
             },
             /* Линейные оси: данные в формате {x, y} (см. toPoints), не категориальные подписи. */
             scales: {
@@ -2057,6 +2770,14 @@
             var lab = ds.label || "";
             var block = document.createElement("div");
             block.className = "method-toggle-block";
+            if (
+              lab === LABEL_LONG_PICARD &&
+              lastRunContext &&
+              lastRunContext.longPicardMeta &&
+              picardRunIsWarning(lastRunContext.longPicardMeta)
+            ) {
+              block.className += " method-picard-warn";
+            }
             var row = document.createElement("label");
             row.className = "method-toggle-row";
             row.title = hint;
@@ -2084,6 +2805,9 @@
             var detBtn = document.createElement("button");
             detBtn.type = "button";
             detBtn.className = "method-detail-btn";
+            if (lab === LABEL_LONG_PICARD && block.className.indexOf("method-picard-warn") >= 0) {
+              detBtn.className += " method-picard-warn";
+            }
             detBtn.textContent = "Подробный расчёт";
             detBtn.addEventListener("click", function (ev) {
               ev.preventDefault();
@@ -2091,6 +2815,23 @@
               showMethodDetailReport(lab || "Ряд " + (idx + 1));
             });
             block.appendChild(detBtn);
+            if (lab === LABEL_LONG_PICARD && getPicardIterViewData()) {
+              var iterBtn = document.createElement("button");
+              iterBtn.type = "button";
+              iterBtn.className = "picard-iter-open-btn";
+              if (block.className.indexOf("method-picard-warn") >= 0) {
+                iterBtn.className += " picard-iter-warn";
+              }
+              iterBtn.style.marginTop = "0.35rem";
+              iterBtn.style.fontSize = "0.8rem";
+              iterBtn.textContent = "Итерации (Prev / Next)";
+              iterBtn.addEventListener("click", function (ev) {
+                ev.preventDefault();
+                ev.stopPropagation();
+                openPicardIterPanel();
+              });
+              block.appendChild(iterBtn);
+            }
             host.appendChild(block);
           })(i);
         }
@@ -2123,6 +2864,259 @@
             chart.destroy();
           } catch (eClear) { /* ignore */ }
           chart = undefined;
+        }
+        hidePicardIterPanel();
+        clearPicardIterChart();
+        syncPicardIterUi();
+      }
+
+      /** Второй экземпляр Chart.js: пошаговый просмотр yy⁽ᵏ⁾ глобального Пикара. */
+      var picardIterChart = null;
+      /** Индекс в meta.picardIterLog, сохраняется между открытиями панели до смены формы. */
+      var picardIterIndex = 0;
+
+      /**
+       * Данные для визуализации итераций: сетка x и журнал iterLog из последнего run().
+       * @returns {{ xs: number[], log: Object[], converged: boolean, globalIter: number, finalYs: number[] }|null}
+       */
+      function getPicardIterViewData() {
+        if (!lastRunContext || !lastRunContext.longPicardMeta) return null;
+        var meta = lastRunContext.longPicardMeta;
+        var log = meta.picardIterLog;
+        if (!log || !log.length) return null;
+        var traj = lastRunContext.trajectories[LABEL_LONG_PICARD];
+        var xs = traj && traj.xs ? traj.xs : null;
+        if (!xs || !xs.length) return null;
+        var exactTraj =
+          lastRunContext.trajectories && lastRunContext.trajectories["Точное y(x)"];
+        return {
+          xs: xs,
+          log: log,
+          converged: !!meta.picardConverged,
+          globalIter: meta.picardGlobalIter,
+          finalYs: traj ? traj.ys : log[log.length - 1].ys,
+          exactXs: exactTraj && exactTraj.xs ? exactTraj.xs : null,
+          exactYs: exactTraj && exactTraj.ys ? exactTraj.ys : null,
+          picardUnstable: picardRunIsWarning(meta),
+          picardIterError: meta.picardIterError || null
+        };
+      }
+
+      /**
+       * Кнопка и панель итераций Пикара: всегда доступны при наличии iterLog; красная подсветка при расходимости.
+       */
+      function syncPicardIterUi() {
+        var btn = document.getElementById("btnPicardIterOpen");
+        var bar = document.querySelector(".picard-iter-bar");
+        var panel = document.getElementById("picardIterPanel");
+        var view = getPicardIterViewData();
+        var warn =
+          lastRunContext &&
+          lastRunContext.longPicardMeta &&
+          picardRunIsWarning(lastRunContext.longPicardMeta);
+        if (btn) {
+          btn.disabled = !view;
+          btn.classList.toggle("picard-iter-warn", !!warn);
+          btn.title = warn
+            ? "Итерации Пикара не сошлись — график и шаги Prev/Next доступны для просмотра расходимости"
+            : "Пошаговый просмотр yy⁽⁰⁾, yy⁽¹⁾, … до сходимости";
+        }
+        if (bar) bar.classList.toggle("picard-iter-warn", !!warn);
+        if (panel) panel.classList.toggle("picard-iter-warn", !!warn);
+      }
+
+      function hidePicardIterPanel() {
+        var panel = document.getElementById("picardIterPanel");
+        if (panel) panel.setAttribute("hidden", "");
+      }
+
+      function clearPicardIterChart() {
+        if (picardIterChart) {
+          try {
+            picardIterChart.destroy();
+          } catch (ePicCh) {
+            /* ignore */
+          }
+          picardIterChart = null;
+        }
+      }
+
+      /**
+       * Ленивое создание графика итераций (отдельный canvas, те же оси linear x/y).
+       */
+      function ensurePicardIterChart() {
+        var canvas = document.getElementById("picardIterChart");
+        if (!canvas) return null;
+        if (picardIterChart) return picardIterChart;
+        picardIterChart = new Chart(canvas.getContext("2d"), {
+          type: "line",
+          data: { datasets: [] },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: "index", intersect: false },
+            plugins: {
+              legend: { display: true, labels: { color: "#8b9cb3", boxWidth: 12 } },
+              title: {
+                display: true,
+                text: "Глобальные итерации Пикара",
+                color: "#8b9cb3"
+              }
+            },
+            scales: {
+              x: {
+                type: "linear",
+                title: { display: true, text: "x", color: "#8b9cb3" },
+                ticks: { color: "#8b9cb3" },
+                grid: { color: "rgba(139, 156, 179, 0.15)" }
+              },
+              y: {
+                title: { display: true, text: "y", color: "#8b9cb3" },
+                ticks: { color: "#8b9cb3" },
+                grid: { color: "rgba(139, 156, 179, 0.15)" }
+              }
+            }
+          }
+        });
+        return picardIterChart;
+      }
+
+      /**
+       * Рисует на отдельном графике yy⁽ᵏ⁾, при k>0 — предыдущее yy⁽ᵏ⁻¹⁾ и (если есть) сходившееся решение.
+       * @param {number} index индекс в picardIterLog
+       */
+      function renderPicardIterChart(index) {
+        var view = getPicardIterViewData();
+        if (!view) return;
+        var log = view.log;
+        var nLog = log.length;
+        index = Math.max(0, Math.min(nLog - 1, index | 0));
+        picardIterIndex = index;
+        var ent = log[index];
+        var ch = ensurePicardIterChart();
+        if (!ch) return;
+
+        var lineBase = {
+          fill: false,
+          tension: 0.15,
+          pointRadius: 2,
+          pointHoverRadius: 4
+        };
+        var datasets = [];
+
+        if (view.exactXs && view.exactYs && view.exactXs.length === view.exactYs.length) {
+          datasets.push(
+            Object.assign({}, lineBase, {
+              label: "Точное y(x)",
+              data: toPoints(view.exactXs, view.exactYs),
+              borderColor: "rgba(126, 231, 135, 0.32)",
+              backgroundColor: "transparent",
+              borderWidth: 0.85,
+              pointRadius: 0,
+              pointHoverRadius: 2,
+              tension: 0.2,
+              order: 0
+            })
+          );
+        }
+
+        if (index > 0) {
+          var prev = log[index - 1];
+          datasets.push(
+            Object.assign({}, lineBase, {
+              label: "yy⁽" + prev.k + "⁾ (пред.)",
+              data: toPoints(view.xs, prev.ys),
+              borderColor: "rgba(139, 156, 179, 0.55)",
+              backgroundColor: "transparent",
+              borderDash: [7, 5],
+              borderWidth: 1.5,
+              pointRadius: 0,
+              order: 1
+            })
+          );
+        }
+
+        datasets.push(
+          Object.assign({}, lineBase, {
+            label: "yy⁽" + ent.k + "⁾",
+            data: toPoints(view.xs, ent.ys),
+            borderColor: view.picardUnstable ? "#f85149" : "#a371f7",
+            backgroundColor: view.picardUnstable
+              ? "rgba(248, 81, 73, 0.12)"
+              : "rgba(163, 113, 247, 0.12)",
+            borderWidth: 2.5,
+            pointRadius: 3,
+            order: 3
+          })
+        );
+
+        if (view.finalYs && view.finalYs.length === view.xs.length && index < nLog - 1) {
+          datasets.push(
+            Object.assign({}, lineBase, {
+              label: "Сошедшее yy",
+              data: toPoints(view.xs, view.finalYs),
+              borderColor: "#7ee787",
+              backgroundColor: "transparent",
+              borderDash: [4, 4],
+              borderWidth: 1.5,
+              pointRadius: 0,
+              order: 2
+            })
+          );
+        }
+
+        ch.data.datasets = datasets;
+        var titleSuffix =
+          " — итерация " + index + " из " + (nLog - 1) + " (k=" + ent.k + ")";
+        if (view.converged && index === nLog - 1) titleSuffix += ", сходимость";
+        else if (view.picardUnstable) titleSuffix += ", расходимость";
+        else if (!view.converged && index === nLog - 1) titleSuffix += ", лимит итераций";
+        ch.options.plugins.title.text = "Глобальные итерации Пикара" + titleSuffix;
+        ch.update();
+
+        var statusEl = document.getElementById("picardIterStatus");
+        var capEl = document.getElementById("picardIterCaption");
+        var prevBtn = document.getElementById("picardIterPrev");
+        var nextBtn = document.getElementById("picardIterNext");
+        if (statusEl) {
+          statusEl.textContent =
+            "Шаг " +
+            (index + 1) +
+            " / " +
+            nLog +
+            "  ·  k = " +
+            ent.k +
+            (view.picardUnstable ? "  ·  не сошлось" : "");
+          statusEl.classList.toggle("picard-iter-warn", !!view.picardUnstable);
+        }
+        if (capEl) {
+          var cap =
+            ent.label +
+            (view.converged && index === nLog - 1 ? " — сходимость достигнута." : "");
+          if (view.picardUnstable && !(view.converged && index === nLog - 1)) {
+            cap += " Расчёт показан полностью; итерации могут уходить от точного решения.";
+          }
+          if (view.picardIterError) {
+            cap += " Остановка: " + view.picardIterError;
+          }
+          capEl.textContent = cap;
+          capEl.style.color = view.picardUnstable ? "#ff7b72" : "";
+        }
+        if (prevBtn) prevBtn.disabled = index <= 0;
+        if (nextBtn) nextBtn.disabled = index >= nLog - 1;
+        syncPicardIterUi();
+      }
+
+      function openPicardIterPanel() {
+        if (!getPicardIterViewData()) return;
+        var panel = document.getElementById("picardIterPanel");
+        if (panel) panel.removeAttribute("hidden");
+        renderPicardIterChart(picardIterIndex);
+        syncPicardIterUi();
+        try {
+          if (panel) panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        } catch (ePicScroll) {
+          /* ignore */
         }
       }
 
@@ -2318,7 +3312,7 @@
               x0: 0,
               x1: 6.283185307179586,
               h: 0.08,
-              note: "Точное решение y = cos x при любом λ; жёсткость задаётся величиной λ (часто цитируется в статьях про BDF и неявные методы)."
+              note: "Точное y = cos x при любом λ; жёсткость задаётся величиной λ. Глобальный Пикар в длинной арифметике на сетке явного Эйлера здесь обычно расходится — смотрите кривую и «График итераций Пикара», неявный Эйлер и точное cos x."
             },
             {
               id: "prothero_robinson_hard",
@@ -2329,7 +3323,7 @@
               x0: 0,
               x1: 6.283185307179586,
               h: 0.02,
-              note: "То же y = cos x; при большом λ явный Эйлер требует очень малого шага для устойчивости."
+              note: "То же y = cos x; при большом λ явный Эйлер на этой сетке сильно уходит от cos x. Пикар (длинная арифметика) тоже расходится — для сравнения используйте неявный Эйлер и точное решение."
             }
           ]
         },
@@ -2709,6 +3703,76 @@
           return;
         }
 
+        /* Последовательные приближения (Пикар) + длинное целое — для любой f(x, y) на сетке явного Эйлера. */
+        var longPicardRes = null;
+        try {
+          longPicardRes = integrateLongPicardWithStepRefinement(f, x0, x1, y0, h, null);
+            parseLines.push(
+              "Доп.: " +
+                LABEL_LONG_PICARD +
+                " — yy⁽ᵏ⁺¹⁾=(111…1)·h·ff(yy⁽ᵏ⁾), глоб. Пикар ≤" +
+                LONG_PICARD_MAX_ITER +
+                " ит. (на мелкой сетке до " +
+                LONG_PICARD_MAX_ITER * Math.pow(2, LONG_PICARD_STEP_REFINE_MAX - 1) +
+                "); при несходимости |h|÷2 и лимит итераций ×2 (≤" +
+                LONG_PICARD_STEP_REFINE_MAX +
+                " попыток); qᵢ=round(Δx·f·10^" +
+                LONG_ARITH_DECIMALS +
+                ")."
+            );
+          if (longPicardRes.meta && longPicardRes.meta.picardHForm != null) {
+            parseLines.push(
+              "  Сетка Пикара: |h|=" +
+                fmtTableNum(Math.abs(longPicardRes.meta.picardHForm)) +
+                (longPicardRes.meta.picardHDivisor > 1
+                  ? " (h_form/" + longPicardRes.meta.picardHDivisor + ")"
+                  : "") +
+                ", узлов " +
+                longPicardRes.meta.picardGridNodes +
+                ", попытка " +
+                (longPicardRes.meta.picardStepRefineIndex + 1) +
+                "/" +
+                LONG_PICARD_STEP_REFINE_MAX +
+                ", ≤" +
+                longPicardRes.meta.picardMaxIter +
+                " глоб. ит." +
+                (longPicardRes.meta.picardConverged ? ", сходимость." : ".")
+            );
+          }
+          if (longPicardRes.meta && !longPicardRes.meta.picardConverged) {
+            parseLines.push(
+              "  Предупреждение: глобальный Пикар не сошёлся за " +
+                longPicardRes.meta.picardMaxIter +
+                " итераций" +
+                (longPicardRes.meta.picardStepRefineExhausted
+                  ? " даже после " + LONG_PICARD_STEP_REFINE_MAX + " уменьшений шага (показан h/2^" +
+                    (LONG_PICARD_STEP_REFINE_MAX - 1) +
+                    ")."
+                  : "") +
+                (longPicardRes.meta.picardDiverged
+                  ? " (|y| превысило " + LONG_PICARD_YS_ABS_MAX + ")."
+                  : ".")
+            );
+          }
+          if (longPicardRes.meta && longPicardRes.meta.packUnavailable) {
+            parseLines.push(
+              "  Упаковка N÷(111…1) для Пикара пропущена: " + longPicardRes.meta.packError
+            );
+          }
+          if (longPicardRes.meta && longPicardRes.meta.picardIterError) {
+            parseLines.push("  Остановка итераций: " + longPicardRes.meta.picardIterError);
+          }
+          if (longPicardRes.meta && picardRunIsWarning(longPicardRes.meta)) {
+            parseLines.push(
+              "  Кривая и «График итераций Пикара» построены (подсветка красным — расходимость или нет сходимости)."
+            );
+          }
+        } catch (ePic) {
+          parseLines.push(
+            "Доп.: " + LABEL_LONG_PICARD + " — ошибка запуска: " + String(ePic.message || ePic)
+          );
+        }
+
         /* Если f не зависит от y: B(z)/(1−z) и длинное целое N÷(111…1) на сетке явного Эйлера. */
         var discreteQuotRes = null;
         var longRepunitRes = null;
@@ -2876,6 +3940,22 @@
             borderDash: [5, 2]
           });
         }
+        if (longPicardRes) {
+          var picardWarnChart =
+            longPicardRes.meta && picardRunIsWarning(longPicardRes.meta);
+          datasets.push({
+            label: LABEL_LONG_PICARD,
+            data: toPoints(longPicardRes.xs, longPicardRes.ys),
+            borderColor: picardWarnChart ? "rgb(248, 81, 73)" : "rgb(168, 85, 247)",
+            backgroundColor: picardWarnChart
+              ? "rgba(248, 81, 73, 0.12)"
+              : "rgba(168, 85, 247, 0.14)",
+            tension: 0.1,
+            pointRadius: 2,
+            borderWidth: picardWarnChart ? 2.5 : 2,
+            borderDash: picardWarnChart ? [6, 3] : [8, 3, 2, 3]
+          });
+        }
         if (exactPts) {
           /* Ряд «точное» добавляется после численных кривых (и после дискретного B/(1−z), если он есть). */
           datasets.push({
@@ -2891,7 +3971,6 @@
         applySavedLegendVisibilityToDatasets(datasets);
         chart.data.datasets = datasets;
         chart.update();
-        rebuildChartLegendToggles();
 
         var fLineText = parseLines.length ? parseLines[0] : "";
         var yLineText = "";
@@ -2935,6 +4014,14 @@
           };
           lastRunContext.longRepunitImplMeta = longRepunitImplRes.meta;
         }
+        if (longPicardRes) {
+          lastRunContext.trajectories[LABEL_LONG_PICARD] = {
+            xs: longPicardRes.xs,
+            ys: longPicardRes.ys
+          };
+          lastRunContext.longPicardMeta = longPicardRes.meta;
+          picardIterIndex = 0;
+        }
         if (exactPts) {
           var exXs = [];
           var exYs = [];
@@ -2944,6 +4031,9 @@
           }
           lastRunContext.trajectories["Точное y(x)"] = { xs: exXs, ys: exYs };
         }
+
+        rebuildChartLegendToggles();
+        syncPicardIterUi();
 
         /* Запись в историю: пропуск первого автозапуска и любого run() под флагом historyRestoring. */
         if (isBootstrapRun) {
@@ -2959,6 +4049,27 @@
        * Порядок важен только для buildPresetUi (заполняет PRESET_BY_ID) до первого выбора пользователя.
        */
       document.getElementById("run").addEventListener("click", run);
+      var btnPicardIterOpen = document.getElementById("btnPicardIterOpen");
+      if (btnPicardIterOpen) {
+        btnPicardIterOpen.addEventListener("click", openPicardIterPanel);
+      }
+      var picardIterPrev = document.getElementById("picardIterPrev");
+      if (picardIterPrev) {
+        picardIterPrev.addEventListener("click", function () {
+          renderPicardIterChart(picardIterIndex - 1);
+        });
+      }
+      var picardIterNext = document.getElementById("picardIterNext");
+      if (picardIterNext) {
+        picardIterNext.addEventListener("click", function () {
+          renderPicardIterChart(picardIterIndex + 1);
+        });
+      }
+      var picardIterClose = document.getElementById("picardIterClose");
+      if (picardIterClose) {
+        picardIterClose.addEventListener("click", hidePicardIterPanel);
+      }
+      syncPicardIterUi();
       buildPresetUi();
       var fPresetEl = document.getElementById("fPreset");
       if (fPresetEl) {
